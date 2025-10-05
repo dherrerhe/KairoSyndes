@@ -1,5 +1,9 @@
+import 'reactflow/dist/style.css';
 import logo from './logo.svg';
 import './App.css';
+import PrimerComponente from './components/PrimerComponente';
+import { SegundoComponente } from './components/SegundoComponente';
+import FlowComponent from './components/FlowComponent';
 
 function App() {
   return (
@@ -9,6 +13,7 @@ function App() {
         <p>
           Edit <code>src/App.js</code> and save to reload.
         </p>
+        <PrimerComponente />
         <a
           className="App-link"
           href="https://reactjs.org"
@@ -17,8 +22,15 @@ function App() {
         >
           Learn React
         </a>
+        <SegundoComponente />
       </header>
+      <div style={{ padding: 16 }}>
+        <h1>React Flow — Nodos personalizados</h1>
+        <p>Ejemplo: edita el texto dentro del nodo y conéctalos.</p>
+        <FlowComponent />
+      </div>
     </div>
+    
   );
 }
 
