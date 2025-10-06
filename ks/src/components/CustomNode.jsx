@@ -1,9 +1,31 @@
+/**
+ * Componente de nodo personalizado para ReactFlow.
+ * 
+ * Este componente define un nodo personalizado que puede ser utilizado
+ * en un diagrama de flujo. Incluye funcionalidades para editar el label
+ * del nodo y mostrar información del mismo.
+ * 
+ * @fileoverview Componente CustomNode para ReactFlow
+ * @author KairoSyndes
+ * @version 1.0.0
+ */
+
 // src/components/CustomNode.jsx
 import React from 'react';
 import { Handle } from 'reactflow';
 
+/**
+ * Componente de nodo personalizado para ReactFlow.
+ * 
+ * @param {Object} props - Las propiedades del componente
+ * @param {string} props.id - Identificador único del nodo
+ * @param {Object} props.data - Datos del nodo
+ * @param {string} props.data.label - Texto del label del nodo
+ * @param {Function} props.data.onChangeLabel - Función para actualizar el label
+ * @returns {JSX.Element} Elemento JSX del nodo personalizado
+ */
 export default function CustomNode({ id, data }) {
-  // data = { label, onChangeLabel }
+  // Extraer propiedades del objeto data con valores por defecto
   const { label = '', onChangeLabel } = data || {};
 
   return (
@@ -15,13 +37,15 @@ export default function CustomNode({ id, data }) {
       minWidth: 160,
       boxShadow: '0 1px 4px rgba(0,0,0,0.1)'
     }}>
-      {/* Top handle (input) */}
+      {/* Handle superior (entrada) */}
       <Handle type="target" position="top" style={{ background: '#555' }} />
 
+      {/* Título del nodo */}
       <div style={{ fontSize: 14, marginBottom: 6, fontWeight: 600 }}>
         Nodo personalizado
       </div>
 
+      {/* Campo de entrada para editar el label */}
       <input
         value={label}
         onChange={(e) => onChangeLabel?.(id, e.target.value)}
@@ -35,6 +59,7 @@ export default function CustomNode({ id, data }) {
         }}
       />
 
+      {/* Botón para mostrar el label actual */}
       <button
         onClick={() => alert(`Label actual: "${label}"`)}
         style={{
@@ -48,7 +73,7 @@ export default function CustomNode({ id, data }) {
         Mostrar label
       </button>
 
-      {/* Bottom handle (output) */}
+      {/* Handle inferior (salida) */}
       <Handle type="source" position="bottom" id="a" style={{ background: '#555' }} />
     </div>
   );

@@ -24,7 +24,7 @@ function App() {
         </a>
         <SegundoComponente />
       </header>
-      <div style={{ padding: 16 }}>
+      <div>
         <h1>React Flow — Nodos personalizados</h1>
         <p>Ejemplo: edita el texto dentro del nodo y conéctalos.</p>
         <FlowComponent />
