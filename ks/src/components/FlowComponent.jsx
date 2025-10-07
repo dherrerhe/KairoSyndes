@@ -52,13 +52,13 @@ const initialNodes = [
     id: '1',
     type: 'custom',
     position: { x: 250, y: 5 },
-    data: { label: 'Nodo A' }
+    data: { name: 'Nodo A', time: '2h', inCharge: 'Usuario 1' }
   },
   {
     id: '2',
     type: 'custom',
     position: { x: 100, y: 150 },
-    data: { label: 'Nodo B' }
+    data: { name: 'Nodo B', time: '1.5h', inCharge: 'Usuario 2' }
   },
   {
     id: '3',
@@ -110,19 +110,19 @@ export default function FlowComponent() {
   const { project } = useReactFlow();
 
   /**
-   * Función para actualizar el label de un nodo específico.
+   * Función para actualizar los datos de un nodo específico.
    * 
    * Esta función permite que los nodos personalizados actualicen
    * su contenido de manera reactiva.
    * 
    * @param {string} nodeId - ID del nodo a actualizar
-   * @param {string} newLabel - Nuevo texto del label
+   * @param {Object} newData - Nuevos datos del nodo (name, time, inCharge)
    */
-  const handleChangeLabel = useCallback((nodeId, newLabel) => {
+  const handleChangeLabel = useCallback((nodeId, newData) => {
     setNodes((nds) =>
       nds.map((n) =>
         n.id === nodeId
-          ? { ...n, data: { ...n.data, label: newLabel, onChangeLabel: handleChangeLabel } }
+          ? { ...n, data: { ...n.data, ...newData, onChangeLabel: handleChangeLabel } }
           : n
       )
     );
@@ -186,7 +186,9 @@ export default function FlowComponent() {
       id: getId(),
       type: newType === 'custom' ? 'custom' : undefined,
       position,
-      data: { label: newLabel, onChangeLabel: handleChangeLabel }
+      data: newType === 'custom' 
+        ? { name: newLabel, time: '', inCharge: '', onChangeLabel: handleChangeLabel }
+        : { label: newLabel, onChangeLabel: handleChangeLabel }
     };
 
     // Agregar el nodo al estado
@@ -214,14 +216,32 @@ export default function FlowComponent() {
         {/* Título del panel */}
         <h3 className="flow-panel-title">Crear nodo</h3>
 
-        {/* Campo para el label del nodo */}
+        {/* Campo para el nombre del nodo */}
         <label className="flow-form-label">
-          Label:
+          Nombre:
           <input
             value={newLabel}
             onChange={(e) => setNewLabel(e.target.value)}
             className="flow-form-input"
-            placeholder="Ingresa el texto del nodo"
+            placeholder="Ingresa el nombre del nodo"
+          />
+        </label>
+        <label className="flow-form-label">
+          Time:
+          <input
+            value={newLabel}
+            onChange={(e) => setNewLabel(e.target.value)}
+            className="flow-form-input"
+            placeholder="Ingresa la duración de la tarea"
+          />
+        </label>
+        <label className="flow-form-label">
+          InCharge:
+          <input
+            value={newLabel}
+            onChange={(e) => setNewLabel(e.target.value)}
+            className="flow-form-input"
+            placeholder="Ingresa la persona encargada"
           />
         </label>
 
@@ -278,7 +298,7 @@ export default function FlowComponent() {
           className="flow-canvas"
         >
           {/* Componentes adicionales del diagrama */}
-          <MiniMap nodeColor='rgb(179, 64, 64)' bgColor='rgb(15, 124, 208)' />
+          <MiniMap nodeColor='rgb(179, 64, 64)' />
           <Controls />
           <Background gap={16} />
         </ReactFlow>

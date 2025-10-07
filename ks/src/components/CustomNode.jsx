@@ -30,61 +30,41 @@ import { Handle } from 'reactflow';
  * @param {Function} props.data.onChangeLabel - Función para actualizar el label
  * @returns {JSX.Element} Elemento JSX del nodo personalizado
  * 
- * @example
- * // Uso del componente CustomNode
- * <CustomNode id="node1" data={{ label: "Mi nodo", onChangeLabel: handleChange }} />
  */
 export default function CustomNode({ id, data }) {
   // Extraer propiedades del objeto data con valores por defecto
-  const { label = '', onChangeLabel } = data || {};
+  const { name = '', time = '', inCharge = '', onChangeLabel } = data || {};
 
   return (
-    <div style={{
-      padding: 10,
-      borderRadius: 8,
-      border: '1px solid #bbb',
-      background: 'white',
-      minWidth: 160,
-      boxShadow: '0 1px 4px rgba(0,0,0,0.1)'
-    }}>
+    <div className="custom-node">
       {/* Handle superior (entrada) */}
-      <Handle type="target" position="top" style={{ background: '#555' }} />
+      <Handle type="target" position="top" className="custom-node-handle" />
 
-      {/* Título del nodo */}
-      <div style={{ fontSize: 14, marginBottom: 6, fontWeight: 600 }}>
-        Nodo personalizado
+      {/* Nombre del nodo */}
+      <div className="custom-node-name">
+        {name || 'Sin nombre'}
       </div>
 
-      {/* Campo de entrada para editar el label */}
-      <input
-        value={label}
-        onChange={(e) => onChangeLabel?.(id, e.target.value)}
-        style={{
-          width: '100%',
-          padding: '6px 8px',
-          borderRadius: 4,
-          border: '1px solid #ddd',
-          marginBottom: 8,
-          boxSizing: 'border-box'
-        }}
-      />
-
-      {/* Botón para mostrar el label actual */}
-      <button
-        onClick={() => alert(`Label actual: "${label}"`)}
-        style={{
-          width: '100%',
-          padding: '6px 8px',
-          borderRadius: 4,
-          border: 'none',
-          cursor: 'pointer'
-        }}
-      >
-        Mostrar label
-      </button>
+      {/* Información del nodo */}
+      {/*
+      <div className="custom-node-info">
+        {time && (
+          <div className="custom-node-field">
+            <span className="custom-node-label">Tiempo:</span>
+            <span className="custom-node-value">{time}</span>
+          </div>
+        )}
+        {inCharge && (
+          <div className="custom-node-field">
+            <span className="custom-node-label">Responsable:</span>
+            <span className="custom-node-value">{inCharge}</span>
+          </div>
+        )}
+      </div>
+      */}
 
       {/* Handle inferior (salida) */}
-      <Handle type="source" position="bottom" id="a" style={{ background: '#555' }} />
+      <Handle type="source" position="bottom" id="a" className="custom-node-handle" />
     </div>
   );
 }

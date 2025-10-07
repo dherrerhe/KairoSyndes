@@ -9,6 +9,9 @@
 
 // Importación de React
 import React from 'react';
+import { Button } from 'react-bootstrap';
+import { useNavigate } from 'react-router-dom';
+import '../App.css';
 
 /**
  * Componente de página principal (Home).
@@ -26,10 +29,17 @@ import React from 'react';
  * <Home />
  */
 export const Home = () => {
+  const navigate = useNavigate();
+  
+  const handleClick = () => {
+    navigate('/WorkSpace');
+  };
+
   return (
-    <div>
+    <div className='home-container'>
       <h1>Bienvenido a KairoSyndes</h1>
-      <p>Página principal de la aplicación</p>
-    </div>
+      <p>Bienvenido a KairoSyndes tu herramienta de creación de diagramas de flujo de preferencia</p>
+      <Button onClick={handleClick}>Ir a la area de trabajo</Button>
+    </div>            
   );
 };
