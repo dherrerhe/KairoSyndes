@@ -105,6 +105,8 @@ export default function FlowComponent() {
   // Estados para el panel de creación de nodos
   const [newLabel, setNewLabel] = useState('Nuevo nodo');
   const [newType, setNewType] = useState('custom');
+  // Estado para controlar el menú desplegable
+  const [isMenuExpanded, setIsMenuExpanded] = useState(false);
 
   // Hook de ReactFlow para proyección de coordenadas
   const { project } = useReactFlow();
@@ -213,62 +215,73 @@ export default function FlowComponent() {
     <div className="flow-container">
       {/* Panel lateral con formulario para crear nodos */}
       <aside className="flow-panel">
-        {/* Título del panel */}
-        <h3 className="flow-panel-title">Crear nodo</h3>
-
-        {/* Campo para el nombre del nodo */}
-        <label className="flow-form-label">
-          Nombre:
-          <input
-            value={newLabel}
-            onChange={(e) => setNewLabel(e.target.value)}
-            className="flow-form-input"
-            placeholder="Ingresa el nombre del nodo"
-          />
-        </label>
-        <label className="flow-form-label">
-          Time:
-          <input
-            value={newLabel}
-            onChange={(e) => setNewLabel(e.target.value)}
-            className="flow-form-input"
-            placeholder="Ingresa la duración de la tarea"
-          />
-        </label>
-        <label className="flow-form-label">
-          InCharge:
-          <input
-            value={newLabel}
-            onChange={(e) => setNewLabel(e.target.value)}
-            className="flow-form-input"
-            placeholder="Ingresa la persona encargada"
-          />
-        </label>
-
-        {/* Selector de tipo de nodo */}
-        <label className="flow-form-label">
-          Tipo:
-          <select
-            value={newType}
-            onChange={(e) => setNewType(e.target.value)}
-            className="flow-form-select"
-          >
-            <option value="custom">Custom</option>
-            <option value="default">Default</option>
-          </select>
-        </label>
-
-        {/* Botón para crear nodo en el centro */}
-        <button
-          onClick={createNodeCentered}
-          className="flow-create-button"
+        {/* Título del panel con flecha desplegable */}
+        <div 
+          className="flow-panel-header"
+          onClick={() => setIsMenuExpanded(!isMenuExpanded)}
         >
-          Crear nodo (centro)
-        </button>
+          <h3 className="flow-panel-title">Crear nodo</h3>
+          <span className={`flow-arrow ${isMenuExpanded ? 'expanded' : ''}`}>
+            ▼
+          </span>
+        </div>
 
-        {/* Instrucciones para el usuario */}
-        <div className="flow-instructions">
-          Usa el botón de arriba para crear nodos en el centro del canvas.
+        {/* Contenedor desplegable del formulario */}
+        <div className={`flow-form-container ${isMenuExpanded ? 'expanded' : ''}`}>
+          {/* Campo para el nombre del nodo */}
+          <label className="flow-form-label">
+            Nombre:
+            <input
+              value={newLabel}
+              onChange={(e) => setNewLabel(e.target.value)}
+              className="flow-form-input"
+              placeholder="Ingresa el nombre del nodo"
+            />
+          </label>
+          <label className="flow-form-label">
+            Hora:
+            <input
+              value={newLabel}
+              onChange={(e) => setNewLabel(e.target.value)}
+              className="flow-form-input"
+              placeholder="Ingresa la duración de la tarea"
+            />
+          </label>
+          <label className="flow-form-label">
+            A cargo:
+            <input
+              value={newLabel}
+              onChange={(e) => setNewLabel(e.target.value)}
+              className="flow-form-input"
+              placeholder="Ingresa la persona encargada"
+            />
+          </label>
+
+          {/* Selector de tipo de nodo */}
+          <label className="flow-form-label">
+            Tipo:
+            <select
+              value={newType}
+              onChange={(e) => setNewType(e.target.value)}
+              className="flow-form-select"
+            >
+              <option value="custom">Costumbre</option>
+              <option value="default">Default</option>
+            </select>
+          </label>
+
+          {/* Botón para crear nodo en el centro */}
+          <button
+            onClick={createNodeCentered}
+            className="flow-create-button"
+          >
+            Crear nodo (centro)
+          </button>
+
+          {/* Instrucciones para el usuario */}
+          <div className="flow-instructions">
+            Usa el botón de arriba para crear nodos en el centro del canvas.
+          </div>
         </div>
 
         {/* Separador visual */}

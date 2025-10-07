@@ -289,6 +289,134 @@ body {
 }
 
 /* ==========================================================================
+   MENÚ DESPLEGABLE
+   ========================================================================== */
+
+/**
+ * Header del panel con título y flecha desplegable.
+ * Contiene el título y la flecha que permite expandir/contraer el menú.
+ */
+.flow-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
+  margin-bottom: 8px;
+  transition: background-color 0.2s ease;
+}
+
+.flow-panel-header:hover {
+  background-color: #f5f5f5;
+  border-radius: 4px;
+  padding: 8px 4px;
+}
+
+/**
+ * Flecha desplegable del panel.
+ * Indica visualmente si el menú está expandido o contraído.
+ */
+.flow-arrow {
+  font-size: 12px;
+  color: #666;
+  transition: transform 0.3s ease;
+  user-select: none;
+}
+
+.flow-arrow.expanded {
+  transform: rotate(180deg);
+}
+
+/**
+ * Contenedor del formulario desplegable.
+ * Se expande y contrae con animación suave.
+ */
+.flow-form-container {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease-out;
+}
+
+.flow-form-container.expanded {
+  max-height: 500px;
+  transition: max-height 0.3s ease-in;
+}
+
+/* ==========================================================================
+   NODOS PERSONALIZADOS
+   ========================================================================== */
+
+.custom-node {
+  background: #fff;
+  border: 2px solid #4CAF50;
+  border-radius: 8px;
+  padding: 10px;
+  min-width: 120px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/**
+ * Nombre del nodo personalizado.
+ * Estilo para el texto principal del nodo.
+ */
+.custom-node-name {
+  font-weight: 600;
+  color: #333;
+  text-align: center;
+  margin-bottom: 5px;
+  font-size: 14px;
+}
+
+/**
+ * Información adicional del nodo.
+ * Contenedor para campos adicionales como tiempo y responsable.
+ */
+.custom-node-info {
+  font-size: 12px;
+  color: #666;
+}
+
+/**
+ * Campo individual dentro del nodo.
+ * Estilo para cada campo de información del nodo.
+ */
+.custom-node-field {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+
+/**
+ * Etiqueta del campo del nodo.
+ * Estilo para las etiquetas de los campos.
+ */
+.custom-node-label {
+  font-weight: 500;
+}
+
+/**
+ * Valor del campo del nodo.
+ * Estilo para los valores de los campos.
+ */
+.custom-node-value {
+  color: #4CAF50;
+  font-weight: 600;
+}
+
+/**
+ * Handles de conexión de los nodos personalizados.
+ * Puntos de conexión para crear aristas entre nodos.
+ */
+.custom-node-handle {
+  width: 8px;
+  height: 8px;
+  background: #4CAF50;
+  border: 2px solid #fff;
+  border-radius: 50%;
+}
+
+/* ==========================================================================
    FORMULARIO DE CREACIÓN DE NODOS
    ========================================================================== */
 
@@ -473,90 +601,7 @@ body {
 .flow-canvas {
   width: 100%;
   height: 100%;
-}
-
-/* ==========================================================================
-   NODO PERSONALIZADO (CUSTOM NODE)
-   ========================================================================== */
-
-/**
- * Contenedor principal del nodo personalizado.
- * Establece el estilo base para todos los nodos custom.
- */
-.custom-node {
-  padding: 12px;
-  border-radius: 8px;
-  border: 2px solid #333;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  min-width: 180px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  font-family: 'Roboto', sans-serif;
-}
-
-/**
- * Handles de conexión del nodo personalizado.
- * Establece el estilo para los puntos de conexión superior e inferior.
- */
-.custom-node-handle {
-  background: #4CAF50 !important;
-  width: 8px !important;
-  height: 8px !important;
-  border: 2px solid white !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
-}
-
-/**
- * Nombre del nodo personalizado.
- * Establece el estilo para el título principal del nodo.
- */
-.custom-node-name {
-  font-size: 16px;
-  font-weight: 700;
-  color: #2c3e50;
-  margin-bottom: 8px;
-  text-align: center;
-  line-height: 1.2;
-}
-
-/**
- * Contenedor de información del nodo.
- * Establece el estilo para la sección que contiene los campos de información.
- */
-.custom-node-info {
-  font-size: 12px;
-  color: #6c757d;
-  line-height: 1.4;
-}
-
-/**
- * Campo individual de información del nodo.
- * Establece el estilo para cada línea de información (tiempo, responsable).
- */
-.custom-node-field {
-  margin-bottom: 4px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-/**
- * Etiqueta del campo de información.
- * Establece el estilo para las etiquetas como "⏱️ Tiempo:" y "👤 Responsable:".
- */
-.custom-node-label {
-  font-weight: 600;
-  color: #495057;
-  white-space: nowrap;
-}
-
-/**
- * Valor del campo de información.
- * Establece el estilo para los valores de tiempo y responsable.
- */
-.custom-node-value {
-  color: #6c757d;
-  font-weight: 500;
-  word-break: break-word;
+  
 }
 
 /* ==========================================================================
@@ -567,7 +612,7 @@ body {
  * Contenedor principal de la página Home.
  * Centra todo el contenido vertical y horizontalmente en la pantalla.
  */
- .home-container {
+.home-container {
   display: flex;
   flex-direction: column;
   align-items: center;
