@@ -13,8 +13,8 @@ import React from 'react';
 // Importación de estilos de React Flow
 import 'reactflow/dist/style.css';
 
-// Importación del componente principal de React Flow
-import FlowComponent from '../components/FlowComponent';
+// Importación del componente principal de React Flow con provider
+import { FlowComponentWithProvider } from '../components/FlowComponent';
 
 /**
  * Componente de página Workspace.
@@ -34,14 +34,8 @@ import FlowComponent from '../components/FlowComponent';
 export const WorkSpace = () => {
   return (
     <div>
-      {/* Título principal de la página */}
-      <h1>React Flow — Nodos personalizados</h1>
-      
-      {/* Descripción de la funcionalidad */}
-      <p>Ejemplo: edita el texto dentro del nodo y conéctalos.</p>
-      
-      {/* Componente principal de React Flow */}
-      <FlowComponent />
+      {/* Componente principal de React Flow con provider */}
+      <FlowComponentWithProvider />
     </div>
   );
 };

@@ -250,3 +250,227 @@ body {
 .App-header svg:hover {
   color: #4CAF50;
 }
+
+/* ==========================================================================
+   COMPONENTE REACT FLOW - ESTILOS PRINCIPALES
+   ========================================================================== */
+
+/**
+ * Contenedor principal del componente React Flow.
+ * Establece el layout flex para el panel lateral y el canvas.
+ */
+.flow-container {
+  display: flex;
+  height: 610px;
+  gap: 8px;
+}
+
+/**
+ * Panel lateral con formulario para crear nodos.
+ * Contiene todos los controles para la creación y configuración de nodos.
+ */
+.flow-panel {
+  width: 220px;
+  padding: 12px;
+  border-right: 1px solid #eee;
+  box-sizing: border-box;
+  background: #fff;
+}
+
+/**
+ * Título del panel lateral.
+ * Establece el estilo para el encabezado "Crear nodo".
+ */
+.flow-panel-title {
+  margin-top: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+/* ==========================================================================
+   FORMULARIO DE CREACIÓN DE NODOS
+   ========================================================================== */
+
+/**
+ * Etiquetas del formulario.
+ * Establece el estilo base para las etiquetas de los campos del formulario.
+ */
+.flow-form-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #555;
+}
+
+/**
+ * Campo de entrada para el label del nodo.
+ * Establece el estilo para el input de texto del label.
+ */
+.flow-form-input {
+  width: 100%;
+  margin-top: 6px;
+  padding: 6px;
+  box-sizing: border-box;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: border-color 0.3s ease;
+}
+
+/**
+ * Estado focus del campo de entrada.
+ * Cambia el color del borde cuando el campo está enfocado.
+ */
+.flow-form-input:focus {
+  outline: none;
+  border-color: #4CAF50;
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+}
+
+/**
+ * Selector de tipo de nodo.
+ * Establece el estilo para el dropdown de selección de tipo.
+ */
+.flow-form-select {
+  width: 100%;
+  margin-top: 6px;
+  padding: 6px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  background-color: white;
+  cursor: pointer;
+  transition: border-color 0.3s ease;
+}
+
+/**
+ * Estado focus del selector.
+ * Cambia el color del borde cuando el selector está enfocado.
+ */
+.flow-form-select:focus {
+  outline: none;
+  border-color: #4CAF50;
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+}
+
+/* ==========================================================================
+   BOTONES Y CONTROLES
+   ========================================================================== */
+
+/**
+ * Botón para crear nodo.
+ * Establece el estilo principal para el botón de creación de nodos.
+ */
+.flow-create-button {
+  width: 100%;
+  padding: 8px 10px;
+  cursor: pointer;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+/**
+ * Estado hover del botón de crear nodo.
+ * Efecto visual cuando se pasa el mouse sobre el botón.
+ */
+.flow-create-button:hover {
+  background-color: #45a049;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/**
+ * Estado active del botón de crear nodo.
+ * Efecto visual cuando se presiona el botón.
+ */
+.flow-create-button:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* ==========================================================================
+   INSTRUCCIONES Y AYUDA
+   ========================================================================== */
+
+/**
+ * Contenedor de instrucciones para el usuario.
+ * Establece el estilo para las instrucciones de uso del componente.
+ */
+.flow-instructions {
+  margin-top: 12px;
+  font-size: 13px;
+  color: #555;
+  line-height: 1.4;
+}
+
+/**
+ * Separador visual entre secciones.
+ * Línea divisoria entre las instrucciones y los tips.
+ */
+.flow-separator {
+  margin-top: 12px;
+  border: none;
+  border-top: 1px solid #eee;
+}
+
+/**
+ * Título de la sección de tips.
+ * Establece el estilo para el encabezado "Tips".
+ */
+.flow-tips-title {
+  margin: 12px 0 8px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+/**
+ * Lista de tips y consejos.
+ * Establece el estilo para la lista de consejos de uso.
+ */
+.flow-tips-list {
+  padding-left: 18px;
+  font-size: 13px;
+  color: #666;
+  line-height: 1.5;
+}
+
+/**
+ * Elementos de la lista de tips.
+ * Establece el estilo para cada elemento de la lista de consejos.
+ */
+.flow-tips-list li {
+  margin-bottom: 4px;
+}
+
+/* ==========================================================================
+   CANVAS DE REACT FLOW
+   ========================================================================== */
+
+/**
+ * Contenedor del canvas de React Flow.
+ * Establece el contenedor principal para el área de trabajo del diagrama.
+ */
+.flow-canvas-container {
+  flex: 1;
+  position: relative;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+/**
+ * Canvas de React Flow.
+ * Establece el estilo para el área de trabajo principal del diagrama.
+ */
+.flow-canvas {
+  width: 100%;
+  height: 100%;
+}

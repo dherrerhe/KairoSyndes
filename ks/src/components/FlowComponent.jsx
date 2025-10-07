@@ -2,14 +2,15 @@
  * @fileoverview Componente principal de ReactFlow para visualizar diagramas de flujo
  * @description Componente que maneja la lógica principal del diagrama de flujo,
  * incluyendo la gestión de nodos, aristas y la interacción del usuario.
- * Utiliza nodos personalizados que permiten editar su contenido en tiempo real.
+ * Utiliza nodos personalizados que permiten editar su contenido en tiempo real
+ * y proporciona funcionalidades avanzadas de creación de nodos.
  * @author KairoSyndes
- * @version 1.0.0
+ * @version 2.0.0
  * @since 2024
  */
 
 // Importación de React y hooks
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 // Importaciones de ReactFlow
 import ReactFlow, {
@@ -19,7 +20,8 @@ import ReactFlow, {
   useEdgesState,
   MiniMap,
   Controls,
-  Background
+  Background,
+  useReactFlow  // Para proyección de coordenadas
 } from 'reactflow';
 
 // Importación de estilos de ReactFlow
@@ -33,6 +35,13 @@ import CustomNode from './CustomNode';
  * Define los tipos de nodos disponibles en el diagrama de flujo.
  */
 const nodeTypes = { custom: CustomNode };
+
+/**
+ * Sistema para generar IDs únicos para nuevos nodos.
+ * Utiliza un contador incremental para asegurar IDs únicos.
+ */
+let id = 100;
+const getId = () => `${id++}`;
 
 /**
  * Nodos iniciales del diagrama de flujo.
@@ -63,8 +72,7 @@ const initialNodes = [
  * Define las conexiones iniciales entre los nodos del diagrama.
  */
 const initialEdges = [
-  { id: 'e1-2', source: '1', target: '2' },
-  { id: 'e2-3', source: '2', target: '3' }
+  { id: 'e1-2', source: '1', target: '2' }
 ];
 
 /**
@@ -72,7 +80,12 @@ const initialEdges = [
  * 
  * Este componente maneja la lógica principal del diagrama de flujo,
  * incluyendo la gestión de nodos, aristas y la interacción del usuario.
- * Proporciona funcionalidades de edición de labels y conexión entre nodos.
+ * Proporciona funcionalidades avanzadas de:
+ * - Edición de labels en tiempo real
+ * - Creación de nodos desde panel lateral
+ * - Creación de nodos haciendo clic en el canvas
+ * - Conexión entre nodos mediante arrastre
+ * - Panel de control con formulario
  * 
  * @component
  * @returns {JSX.Element} Elemento JSX del componente de flujo
@@ -82,9 +95,19 @@ const initialEdges = [
  * <FlowComponent />
  */
 export default function FlowComponent() {
+  // Referencia al contenedor del ReactFlow para cálculos de posición
+  const reactFlowWrapper = useRef(null);
+
   // Estados para manejar nodos y aristas del diagrama de flujo
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+
+  // Estados para el panel de creación de nodos
+  const [newLabel, setNewLabel] = useState('Nuevo nodo');
+  const [newType, setNewType] = useState('custom');
+
+  // Hook de ReactFlow para proyección de coordenadas
+  const { project } = useReactFlow();
 
   /**
    * Función para actualizar el label de un nodo específico.
@@ -97,17 +120,21 @@ export default function FlowComponent() {
    */
   const handleChangeLabel = useCallback((nodeId, newLabel) => {
     setNodes((nds) =>
-      nds.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, label: newLabel, onChangeLabel: handleChangeLabel } } : n))
+      nds.map((n) =>
+        n.id === nodeId
+          ? { ...n, data: { ...n.data, label: newLabel, onChangeLabel: handleChangeLabel } }
+          : n
+      )
     );
   }, [setNodes]);
 
   /**
    * Efecto para inyectar la función onChangeLabel en nodos personalizados.
    * 
-   * Se ejecuta cuando el componente se monta y cuando cambia handleChangeLabel
-   * para asegurar que todos los nodos personalizados tengan acceso a la función.
+   * Se ejecuta cuando el componente se monta para asegurar que todos
+   * los nodos personalizados tengan acceso a la función de actualización.
    */
-  React.useEffect(() => {
+  useEffect(() => {
     setNodes((nds) =>
       nds.map((n) =>
         n.type === 'custom'
@@ -115,7 +142,8 @@ export default function FlowComponent() {
           : n
       )
     );
-  }, [handleChangeLabel]); // Incluimos handleChangeLabel en las dependencias
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /**
    * Función para manejar la conexión entre nodos.
@@ -131,45 +159,153 @@ export default function FlowComponent() {
   );
 
   /**
-   * Determina el color de un nodo basado en su tipo.
+   * Función para crear un nodo centrado en la vista actual.
    * 
-   * Esta función se utiliza para asignar un color visual a los nodos
-   * en el MiniMap, ayudando a diferenciar los tipos de nodos.
-   * 
-   * @param {Object} node - El objeto nodo de ReactFlow.
-   * @param {string} node.type - El tipo del nodo (e.g., 'input', 'output', 'custom').
-   * @returns {string} El color hexadecimal correspondiente al tipo de nodo.
+   * Calcula la posición del centro del contenedor y crea un nuevo nodo
+   * en esa ubicación. Útil para crear nodos desde el panel lateral.
    */
-  const nodeColor = (node) => {
-    switch (node.type) {
-      case 'input':
-        return '#6ede87';
-      case 'output':
-        return '#6865A5';
-      default:
-        return '#808080'; // Color gris para los nodos por defecto (comandos)
+  const createNodeCentered = useCallback(() => {
+    // Obtener las dimensiones del contenedor
+    const bounds = reactFlowWrapper.current?.getBoundingClientRect();
+    let position = { x: 250, y: 150 }; // Posición por defecto
+
+    // Si tenemos las dimensiones, calcular el centro
+    if (bounds) {
+      const centerClient = {
+        x: bounds.left + bounds.width / 2,
+        y: bounds.top + bounds.height / 2
+      };
+      position = project({
+        x: centerClient.x - bounds.left,
+        y: centerClient.y - bounds.top
+      });
     }
-  };
+
+    // Crear el nuevo nodo
+    const newNode = {
+      id: getId(),
+      type: newType === 'custom' ? 'custom' : undefined,
+      position,
+      data: { label: newLabel, onChangeLabel: handleChangeLabel }
+    };
+
+    // Agregar el nodo al estado
+    setNodes((nds) => nds.concat(newNode));
+  }, [newLabel, newType, project, handleChangeLabel, setNodes]);
+
+
+  /**
+   * Función para manejar el evento de arrastre sobre el canvas.
+   * 
+   * Permite el drag & drop de elementos externos al canvas.
+   * Útil para futuras implementaciones de drag & drop desde sidebar.
+   * 
+   * @param {Object} event - Evento de arrastre
+   */
+  const onDragOver = useCallback((event) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+  }, []);
 
   return (
-    <div style={{ width: '100%', height: '700px' }} >
-      <ReactFlowProvider>
+    <div className="flow-container">
+      {/* Panel lateral con formulario para crear nodos */}
+      <aside className="flow-panel">
+        {/* Título del panel */}
+        <h3 className="flow-panel-title">Crear nodo</h3>
+
+        {/* Campo para el label del nodo */}
+        <label className="flow-form-label">
+          Label:
+          <input
+            value={newLabel}
+            onChange={(e) => setNewLabel(e.target.value)}
+            className="flow-form-input"
+            placeholder="Ingresa el texto del nodo"
+          />
+        </label>
+
+        {/* Selector de tipo de nodo */}
+        <label className="flow-form-label">
+          Tipo:
+          <select
+            value={newType}
+            onChange={(e) => setNewType(e.target.value)}
+            className="flow-form-select"
+          >
+            <option value="custom">Custom</option>
+            <option value="default">Default</option>
+          </select>
+        </label>
+
+        {/* Botón para crear nodo en el centro */}
+        <button
+          onClick={createNodeCentered}
+          className="flow-create-button"
+        >
+          Crear nodo (centro)
+        </button>
+
+        {/* Instrucciones para el usuario */}
+        <div className="flow-instructions">
+          Usa el botón de arriba para crear nodos en el centro del canvas.
+        </div>
+
+        {/* Separador visual */}
+        <hr className="flow-separator" />
+
+        {/* Tips y consejos */}
+        <h4 className="flow-tips-title">Tips</h4>
+        <ul className="flow-tips-list">
+          <li>Arrastra nodos para reposicionarlos en el canvas</li>
+          <li>Conecta nodos arrastrando desde un handle a otro</li>
+          <li>Usa los controles para hacer zoom y navegar</li>
+          <li>Guarda en localStorage: usa setNodes y setEdges para persistir</li>
+        </ul>
+      </aside>
+
+      {/* Contenedor principal del ReactFlow */}
+      <div ref={reactFlowWrapper} className="flow-canvas-container">
         <ReactFlow
           nodes={nodes}
           edges={edges}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
+          onDragOver={onDragOver}
           nodeTypes={nodeTypes}
           fitView
+          className="flow-canvas"
         >
           {/* Componentes adicionales del diagrama */}
-          <MiniMap bgColor="#ADD8E6" nodeColor={nodeColor} maskColor='rgba(146, 36, 36, 0.6)'/>
+          <MiniMap nodeColor='rgb(179, 64, 64)' bgColor='rgb(15, 124, 208)' />
           <Controls />
-          <Background gap={16}/>
+          <Background gap={16} />
         </ReactFlow>
-      </ReactFlowProvider>
+      </div>
     </div>
   );
 }
 
+/**
+ * Componente wrapper que incluye el ReactFlowProvider.
+ * 
+ * Este componente envuelve FlowComponent con ReactFlowProvider,
+ * necesario para que los hooks de ReactFlow funcionen correctamente.
+ * Útil cuando se monta el componente desde App.js.
+ * 
+ * @component
+ * @param {Object} props - Propiedades que se pasan al FlowComponent
+ * @returns {JSX.Element} Elemento JSX del componente con provider
+ * 
+ * @example
+ * // Uso del componente con provider
+ * <FlowComponentWithProvider />
+ */
+export function FlowComponentWithProvider(props) {
+  return (
+    <ReactFlowProvider>
+      <FlowComponent {...props} />
+    </ReactFlowProvider>
+  );
+}
