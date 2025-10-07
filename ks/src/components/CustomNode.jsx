@@ -1,28 +1,38 @@
 /**
- * Componente de nodo personalizado para ReactFlow.
- * 
- * Este componente define un nodo personalizado que puede ser utilizado
- * en un diagrama de flujo. Incluye funcionalidades para editar el label
- * del nodo y mostrar información del mismo.
- * 
- * @fileoverview Componente CustomNode para ReactFlow
+ * @fileoverview Componente de nodo personalizado para ReactFlow
+ * @description Nodo personalizado que permite editar texto en tiempo real
+ * y crear conexiones en diagramas de flujo interactivos.
  * @author KairoSyndes
  * @version 1.0.0
+ * @since 2024
  */
 
-// src/components/CustomNode.jsx
+// Importación de React
 import React from 'react';
+
+// Importación de Handle de ReactFlow para puntos de conexión
 import { Handle } from 'reactflow';
 
 /**
  * Componente de nodo personalizado para ReactFlow.
  * 
- * @param {Object} props - Las propiedades del componente
- * @param {string} props.id - Identificador único del nodo
+ * Este componente crea un nodo interactivo que permite:
+ * - Editar el texto del label en tiempo real
+ * - Mostrar el contenido actual del nodo
+ * - Crear conexiones con otros nodos mediante handles
+ * - Personalizar la apariencia visual del nodo
+ * 
+ * @component
+ * @param {Object} props - Propiedades del componente
+ * @param {string} props.id - Identificador único del nodo en ReactFlow
  * @param {Object} props.data - Datos del nodo
  * @param {string} props.data.label - Texto del label del nodo
  * @param {Function} props.data.onChangeLabel - Función para actualizar el label
  * @returns {JSX.Element} Elemento JSX del nodo personalizado
+ * 
+ * @example
+ * // Uso del componente CustomNode
+ * <CustomNode id="node1" data={{ label: "Mi nodo", onChangeLabel: handleChange }} />
  */
 export default function CustomNode({ id, data }) {
   // Extraer propiedades del objeto data con valores por defecto

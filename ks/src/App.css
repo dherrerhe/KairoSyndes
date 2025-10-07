@@ -1,39 +1,252 @@
+/**
+ * @fileoverview Estilos principales de la aplicación KairoSyndes
+ * @description Archivo CSS que contiene todos los estilos para la aplicación,
+ * incluyendo el layout principal, sidebar de navegación, y componentes de React Flow.
+ * @author KairoSyndes
+ * @version 1.0.0
+ * @since 2024
+ */
+
+/* ==========================================================================
+   ESTILOS GLOBALES Y RESET
+   ========================================================================== */
+
+/**
+ * Contenedor principal de la aplicación.
+ * Centra el contenido y establece la estructura base.
+ */
 .App {
   text-align: center;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+/**
+ * Reset de estilos para el body.
+ * Establece márgenes y padding a 0, y define la fuente principal.
+ */
+body {
+  box-sizing: border-box;
+  margin: 0%;
+  padding: 0%;
+  font-family: 'Roboto', sans-serif;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
+/* ==========================================================================
+   HEADER PRINCIPAL
+   ========================================================================== */
 
+/**
+ * Header principal de la aplicación.
+ * Contiene el menú hamburguesa y establece el estilo del encabezado.
+ */
 .App-header {
-  background-color: #282c34;
-  min-height: 100vh;
+  padding: 10px 20px;
+  background: rgb(35, 33, 83);
+  height: 50px;
+  width: auto;
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+/* ==========================================================================
+   SIDEBAR DE NAVEGACIÓN
+   ========================================================================== */
+
+/**
+ * Sidebar principal de navegación.
+ * Se posiciona de forma fija y se desliza desde la izquierda.
+ * Inicialmente está oculto (left: -100%).
+ */
+.sidenav {
+  width: 240px;
+  background: black;
+  position: fixed;
+  top: 0;
+  left: -100%;
+  height: 100vh;
+  padding: 0 30px;
+  transition: all 0.3s ease;
+  text-align: left;
+  align-items: start;
+  z-index: 1000;
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
+}
+
+/**
+ * Estado activo del sidebar.
+ * Cuando está activo, se desliza hacia la derecha (left: 0).
+ */
+.sidenav.active {
+  left: 0;
+}
+
+/**
+ * Header del sidebar con título y botón de cierre.
+ * Contiene el título "KairoSyndes" y el botón X para cerrar.
+ */
+.sidenav-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 0;
+  border-bottom: 1px solid #333;
+  margin-bottom: 10px;
+}
+
+/**
+ * Título del sidebar.
+ * Estilo para el texto "KairoSyndes" en el header.
+ */
+.sidenav-title {
+  color: white;
+  font-family: cursive;
+  font-size: 18px;
+  font-weight: bold;
+  margin: 0;
+  letter-spacing: 1px;
+}
+
+/**
+ * Botón de cierre del sidebar.
+ * Estilo para el botón X que cierra el sidebar.
+ */
+.close-btn {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+  display: flex;
   align-items: center;
   justify-content: center;
-  font-size: calc(10px + 2vmin);
+}
+
+/**
+ * Estado hover del botón de cierre.
+ * Efecto visual cuando se pasa el mouse sobre el botón.
+ */
+.close-btn:hover {
+  background-color: #333;
+  color: #ff4444;
+  transform: scale(1.1);
+}
+
+/* ==========================================================================
+   OVERLAY DEL SIDEBAR
+   ========================================================================== */
+
+/**
+ * Overlay semi-transparente que aparece cuando el sidebar está abierto.
+ * Permite cerrar el sidebar haciendo clic fuera de él.
+ */
+.sidenav-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+}
+
+/**
+ * Estado activo del overlay.
+ * Cuando está activo, se hace visible y opaco.
+ */
+.sidenav-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* ==========================================================================
+   MENÚ DE NAVEGACIÓN
+   ========================================================================== */
+
+/**
+ * Lista principal del menú de navegación.
+ * Establece el estilo base para la lista de enlaces.
+ */
+.sidenav ul {
+  list-style: none;
+  margin: 20px 0;
+  padding: 0;
+}
+
+/**
+ * Iconos dentro de los enlaces del menú.
+ * Establece el espaciado y posicionamiento de los iconos.
+ */
+.sidenav ul svg {
+  margin: 0 10px -2px 3px; /* top - right - bottom - left */
+}
+
+/**
+ * Elementos de la lista del menú.
+ * Establece el espaciado entre elementos de navegación.
+ */
+.sidenav ul li {
+  list-style-type: none;
+  margin: 2px 0;
+}
+
+/**
+ * Enlaces del menú de navegación.
+ * Establece el estilo base para los enlaces del sidebar.
+ */
+.sidenav ul li a {
+  color: white;
+  text-decoration: none;
+  font-size: 16px;
+  display: block;
+  padding: 10px 15px;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+}
+
+/**
+ * Estado visited de los enlaces.
+ * Mantiene el color blanco para enlaces visitados.
+ */
+.sidenav ul li a:visited {
   color: white;
 }
 
-.App-link {
-  color: #61dafb;
+/**
+ * Estados hover y active de los enlaces.
+ * Efecto visual cuando se pasa el mouse o está activo.
+ */
+.sidenav ul li a:hover,
+.sidenav ul li a.active {
+  color: #4CAF50;
+  background-color: rgba(76, 175, 80, 0.1);
+  transform: translateX(5px);
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+/* ==========================================================================
+   ICONO DEL MENÚ HAMBURGUESA
+   ========================================================================== */
+
+/**
+ * Icono del menú hamburguesa en el header.
+ * Establece el estilo base para el ícono de navegación.
+ */
+.App-header svg {
+  font-size: 25px;
+  cursor: pointer;
+  color: white;
+  transition: color 0.3s ease;
 }
 
+/**
+ * Estado hover del icono del menú hamburguesa.
+ * Cambia el color cuando se pasa el mouse sobre él.
+ */
+.App-header svg:hover {
+  color: #4CAF50;
+}
