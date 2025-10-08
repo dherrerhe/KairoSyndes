@@ -104,6 +104,8 @@ export default function FlowComponent() {
 
   // Estados para el panel de creación de nodos
   const [newLabel, setNewLabel] = useState('Nuevo nodo');
+  const [newTime, setNewTime] = useState('');
+  const [newInCharge, setNewInCharge] = useState('');
   const [newType, setNewType] = useState('custom');
   // Estado para controlar el menú desplegable
   const [isMenuExpanded, setIsMenuExpanded] = useState(false);
@@ -199,13 +201,13 @@ export default function FlowComponent() {
       type: newType === 'custom' ? 'custom' : undefined,
       position,
       data: newType === 'custom' 
-        ? { name: newLabel, time: '', inCharge: '', onChangeLabel: handleChangeLabel }
+        ? { name: newLabel, time: newTime, inCharge: newInCharge, onChangeLabel: handleChangeLabel }
         : { label: newLabel, onChangeLabel: handleChangeLabel }
     };
 
     // Agregar el nodo al estado
     setNodes((nds) => nds.concat(newNode));
-  }, [newLabel, newType, project, handleChangeLabel, setNodes]);
+  }, [newLabel, newTime, newInCharge, newType, project, handleChangeLabel, setNodes]);
 
 
   /**
@@ -394,8 +396,8 @@ export default function FlowComponent() {
           <label className="flow-form-label">
             Hora:
             <input
-              value={newLabel}
-              onChange={(e) => setNewLabel(e.target.value)}
+              value={newTime}
+              onChange={(e) => setNewTime(e.target.value)}
               className="flow-form-input"
               placeholder="Ingresa la duración de la tarea"
             />
@@ -403,8 +405,8 @@ export default function FlowComponent() {
           <label className="flow-form-label">
             A cargo:
             <input
-              value={newLabel}
-              onChange={(e) => setNewLabel(e.target.value)}
+              value={newInCharge}
+              onChange={(e) => setNewInCharge(e.target.value)}
               className="flow-form-input"
               placeholder="Ingresa la persona encargada"
             />

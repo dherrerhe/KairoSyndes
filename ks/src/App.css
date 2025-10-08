@@ -594,6 +594,51 @@ body {
 }
 
 /* ==========================================================================
+   ESTILOS DE REACT FLOW
+   ========================================================================== */
+
+/**
+ * Contenedor principal del diagrama de flujo.
+ * Establece el layout flexbox para el panel lateral y el canvas.
+ */
+.flow-container {
+  display: flex;
+  height: 100vh;
+  width: 100%;
+}
+
+/**
+ * Panel lateral del diagrama de flujo.
+ * Contiene el formulario para crear nodos y controles adicionales.
+ */
+.flow-panel {
+  width: 220px;
+  padding: 12px;
+  border-right: 1px solid #eee;
+  box-sizing: border-box;
+  background: #fff;
+}
+
+/**
+ * Canvas del diagrama de flujo.
+ * Contenedor principal donde se renderiza ReactFlow.
+ */
+.flow-canvas-container {
+  flex: 1;
+  position: relative;
+  background: #fafafa;
+}
+
+/**
+ * Canvas de ReactFlow.
+ * Establece las dimensiones completas del área de trabajo.
+ */
+.flow-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+/* ==========================================================================
    FORMULARIO DE CREACIÓN DE NODOS
    ========================================================================== */
 
