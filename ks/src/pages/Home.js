@@ -29,13 +29,13 @@ function generateId() {
 }
 
 export default function Home() {
-  const navigate = useNavigate(); // Hook para la navegación programática entre rutas
-  const [workflows, setWorkflows] = useState([]); // Estado para almacenar la lista de flujos de trabajo
-  const [showModal, setShowModal] = useState(false); // Estado para controlar la visibilidad del modal de creación de flujo
-  const [name, setName] = useState(''); // Estado para el nombre del nuevo flujo de trabajo
-  const [creator, setCreator] = useState('Usuario Demo'); // Estado para el creador del flujo de trabajo (ejemplo)
-  const [selectedTemplate, setSelectedTemplate] = useState(TEMPLATES[0].id); // Estado para la plantilla seleccionada al crear un flujo
-  const [error, setError] = useState(''); // Estado para mostrar mensajes de error en el formulario del modal
+  const navigate = useNavigate();
+  const [workflows, setWorkflows] = useState([]);
+  const [showModal, setShowModal] = useState(false);
+  const [name, setName] = useState('');
+  const [creator, setCreator] = useState('Usuario Demo'); // reemplaza con usuario real si lo tienes
+  const [selectedTemplate, setSelectedTemplate] = useState(TEMPLATES[0].id);
+  const [error, setError] = useState('');
 
   // cargar workflows desde localStorage al montar
   useEffect(() => {
