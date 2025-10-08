@@ -29,6 +29,7 @@ import 'reactflow/dist/style.css';
 
 // Importación del componente de nodo personalizado
 import CustomNode from './CustomNode';
+import EdgeEditorPanel from './EdgeEditorPanel';
 
 /**
  * Configuración de tipos de nodos personalizados para ReactFlow.
@@ -71,9 +72,7 @@ const initialNodes = [
  * Aristas iniciales del diagrama de flujo.
  * Define las conexiones iniciales entre los nodos del diagrama.
  */
-const initialEdges = [
-  { id: 'e1-2', source: '1', target: '2' }
-];
+const initialEdges = [{ id: 'e1-2', source: '1', target: '2', label: 'dependencia' }];
 
 /**
  * Componente principal del diagrama de flujo.
@@ -97,6 +96,7 @@ const initialEdges = [
 export default function FlowComponent() {
   // Referencia al contenedor del ReactFlow para cálculos de posición
   const reactFlowWrapper = useRef(null);
+  const reactFlowInstance = useRef(null);
 
   // Estados para manejar nodos y aristas del diagrama de flujo
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
@@ -107,6 +107,10 @@ export default function FlowComponent() {
   const [newTime, setNewTime] = useState('');
   const [newInCharge, setNewInCharge] = useState('');
   const [newType, setNewType] = useState('custom');
+
+  // Estado para la arista seleccionada (editar/eliminar)
+  const [selectedEdgeId, setSelectedEdgeId] = useState(null);
+
   // Estado para controlar el menú desplegable
   const [isMenuExpanded, setIsMenuExpanded] = useState(false);
   
@@ -366,6 +370,61 @@ export default function FlowComponent() {
     event.dataTransfer.dropEffect = 'move';
   }, []);
 
+  /**
+   * Handlers para la gestión de interacciones con aristas: selección, edición y eliminación.
+   */
+
+  /**
+   * Maneja el evento de clic en una arista dentro del canvas de React Flow.
+   * Evita el comportamiento predeterminado del panel para prevenir la creación accidental de nodos.
+   * Establece el ID de la arista clicada en el estado `selectedEdgeId`,
+   * lo que activa la visualización del panel de edición de aristas.
+   *
+   * @param {MouseEvent} event - El objeto de evento del DOM.
+   * @param {Object} edge - El objeto de la arista que fue clicada.
+   */
+   const onEdgeClick = useCallback((event, edge) => {
+     event.preventDefault(); // Evita el comportamiento predeterminado de clic en el panel de React Flow
+     setSelectedEdgeId(edge.id); // Establece la arista clicada como seleccionada
+   }, []);
+
+  /**
+   * Actualiza la etiqueta de una arista específica.
+   * Itera sobre la lista actual de aristas y modifica la propiedad `label`
+   * para la arista que coincide con el `edgeId` proporcionado.
+   *
+   * @param {string} edgeId - El identificador único de la arista a actualizar.
+   * @param {string} newLabel - La nueva etiqueta a asignar a la arista.
+   */
+   const saveEdgeLabel = useCallback(
+     (edgeId, newLabel) => {
+       setEdges((eds) => eds.map((e) => (e.id === edgeId ? { ...e, label: newLabel } : e)));
+     },
+     [setEdges]
+   );
+
+  /**
+   * Elimina una arista específica del canvas de React Flow.
+   * Filtra la arista con el `edgeId` dado de la lista actual de aristas
+   * y restablece el estado `selectedEdgeId` a `null`.
+   *
+   * @param {string} edgeId - El identificador único de la arista a eliminar.
+   */
+   const deleteEdge = useCallback(
+     (edgeId) => {
+       setEdges((eds) => eds.filter((e) => e.id !== edgeId));
+       setSelectedEdgeId(null); // Limpia la arista seleccionada después de la eliminación
+     },
+     [setEdges]
+   );
+
+  /**
+   * Busca el objeto de la arista actualmente seleccionada en el array `edges`.
+   * Esta variable contiene el objeto completo de la arista correspondiente a `selectedEdgeId`,
+   * o `null` si no hay ninguna arista seleccionada actualmente.
+   */
+  const selectedEdge = edges.find((e) => e.id === selectedEdgeId) ?? null;
+
   return (
     <div className="flow-container">
       {/* Panel lateral con formulario para crear nodos */}
@@ -393,8 +452,9 @@ export default function FlowComponent() {
               placeholder="Ingresa el nombre del nodo"
             />
           </label>
+
           <label className="flow-form-label">
-            Hora:
+            Duración:
             <input
               value={newTime}
               onChange={(e) => setNewTime(e.target.value)}
@@ -402,6 +462,7 @@ export default function FlowComponent() {
               placeholder="Ingresa la duración de la tarea"
             />
           </label>
+
           <label className="flow-form-label">
             A cargo:
             <input
@@ -420,7 +481,7 @@ export default function FlowComponent() {
               onChange={(e) => setNewType(e.target.value)}
               className="flow-form-select"
             >
-              <option value="custom">Costumbre</option>
+              <option value="custom">Custom</option>
               <option value="default">Default</option>
             </select>
           </label>
@@ -449,7 +510,23 @@ export default function FlowComponent() {
           <li>Conecta nodos arrastrando desde un handle a otro</li>
           <li>Usa los controles para hacer zoom y navegar</li>
           <li>Guarda en localStorage: usa setNodes y setEdges para persistir</li>
+          <li>Selecciona una arista para editar su etiqueta o eliminarla</li>
         </ul>
+
+        {/* --- NUEVO: Editor de aristas en el panel lateral --- */}
+         {selectedEdge ? (
+           <div className="edge-editor-region">
+             <h4>Editar arista</h4>
+             <EdgeEditorPanel
+               edge={selectedEdge}
+               onSave={(newLabel) => saveEdgeLabel(selectedEdge.id, newLabel)}
+               onDelete={() => deleteEdge(selectedEdge.id)}
+               onClose={() => setSelectedEdgeId(null)}
+             />
+           </div>
+         ) : (
+           <div className="edge-editor-placeholder">Selecciona una arista en el canvas para editarla</div>
+         )}
       </aside>
 
       {/* Contenedor principal del ReactFlow */}
@@ -463,7 +540,9 @@ export default function FlowComponent() {
           onDragOver={onDragOver}
           onNodeClick={onNodeClick}
           nodeTypes={nodeTypes}
+          onEdgeClick={onEdgeClick}
           fitView
+          onInit={(instance) => (reactFlowInstance.current = instance)}
           className="flow-canvas"
         >
           {/* Componentes adicionales del diagrama */}
