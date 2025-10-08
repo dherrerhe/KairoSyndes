@@ -107,6 +107,16 @@ export default function FlowComponent() {
   const [newType, setNewType] = useState('custom');
   // Estado para controlar el menú desplegable
   const [isMenuExpanded, setIsMenuExpanded] = useState(false);
+  
+  // Estados para el menú contextual del nodo
+  const [selectedNode, setSelectedNode] = useState(null);
+  const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
+  const [isContextMenuVisible, setIsContextMenuVisible] = useState(false);
+  const [editingNodeData, setEditingNodeData] = useState({ name: '', time: '', inCharge: '' });
+  
+  // Estados para el arrastre del menú contextual
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
   // Hook de ReactFlow para proyección de coordenadas
   const { project } = useReactFlow();
@@ -197,6 +207,149 @@ export default function FlowComponent() {
     setNodes((nds) => nds.concat(newNode));
   }, [newLabel, newType, project, handleChangeLabel, setNodes]);
 
+
+  /**
+   * Función para manejar el clic en un nodo.
+   * 
+   * Abre el menú contextual con la información del nodo seleccionado.
+   * 
+   * @param {Object} event - Evento de clic
+   * @param {Object} node - Nodo que fue clicado
+   */
+  const onNodeClick = useCallback((event, node) => {
+    event.stopPropagation();
+    
+    // Obtener la posición del clic
+    const rect = reactFlowWrapper.current?.getBoundingClientRect();
+    if (rect) {
+      setContextMenuPosition({
+        x: event.clientX - rect.left,
+        y: event.clientY - rect.top
+      });
+    }
+    
+    // Configurar el nodo seleccionado y sus datos
+    setSelectedNode(node);
+    setEditingNodeData({
+      name: node.data.name || '',
+      time: node.data.time || '',
+      inCharge: node.data.inCharge || ''
+    });
+    setIsContextMenuVisible(true);
+  }, []);
+
+  /**
+   * Función para cerrar el menú contextual.
+   */
+  const closeContextMenu = useCallback(() => {
+    setIsContextMenuVisible(false);
+    setSelectedNode(null);
+    setIsDragging(false);
+  }, []);
+
+  /**
+   * Función para iniciar el arrastre del menú contextual.
+   */
+  const handleDragStart = useCallback((event) => {
+    event.preventDefault();
+    setIsDragging(true);
+    
+    const rect = reactFlowWrapper.current?.getBoundingClientRect();
+    if (rect) {
+      setDragOffset({
+        x: event.clientX - rect.left - contextMenuPosition.x,
+        y: event.clientY - rect.top - contextMenuPosition.y
+      });
+    }
+  }, [contextMenuPosition]);
+
+  /**
+   * Función para manejar el movimiento durante el arrastre.
+   */
+  const handleDragMove = useCallback((event) => {
+    if (!isDragging) return;
+    
+    const rect = reactFlowWrapper.current?.getBoundingClientRect();
+    if (rect) {
+      const newX = event.clientX - rect.left - dragOffset.x;
+      const newY = event.clientY - rect.top - dragOffset.y;
+      
+      // Limitar el movimiento dentro del contenedor
+      const maxX = rect.width - 300; // Ancho del menú
+      const maxY = rect.height - 200; // Altura aproximada del menú
+      
+      setContextMenuPosition({
+        x: Math.max(0, Math.min(newX, maxX)),
+        y: Math.max(0, Math.min(newY, maxY))
+      });
+    }
+  }, [isDragging, dragOffset]);
+
+  /**
+   * Función para finalizar el arrastre.
+   */
+  const handleDragEnd = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  /**
+   * Función para actualizar la información del nodo seleccionado.
+   */
+  const updateNodeData = useCallback(() => {
+    if (selectedNode) {
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === selectedNode.id
+            ? { 
+                ...n, 
+                data: { 
+                  ...n.data, 
+                  name: editingNodeData.name,
+                  time: editingNodeData.time,
+                  inCharge: editingNodeData.inCharge,
+                  onChangeLabel: handleChangeLabel 
+                } 
+              }
+            : n
+        )
+      );
+      closeContextMenu();
+    }
+  }, [selectedNode, editingNodeData, setNodes, handleChangeLabel, closeContextMenu]);
+
+  /**
+   * Efecto para cerrar el menú contextual al hacer clic fuera de él.
+   */
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (isContextMenuVisible && !event.target.closest('.node-context-menu')) {
+        closeContextMenu();
+      }
+    };
+
+    if (isContextMenuVisible) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isContextMenuVisible, closeContextMenu]);
+
+  /**
+   * Efecto para manejar el arrastre del menú contextual.
+   */
+  useEffect(() => {
+    if (isDragging) {
+      document.addEventListener('mousemove', handleDragMove);
+      document.addEventListener('mouseup', handleDragEnd);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleDragMove);
+      document.removeEventListener('mouseup', handleDragEnd);
+    };
+  }, [isDragging, handleDragMove, handleDragEnd]);
 
   /**
    * Función para manejar el evento de arrastre sobre el canvas.
@@ -306,6 +459,7 @@ export default function FlowComponent() {
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           onDragOver={onDragOver}
+          onNodeClick={onNodeClick}
           nodeTypes={nodeTypes}
           fitView
           className="flow-canvas"
@@ -315,6 +469,81 @@ export default function FlowComponent() {
           <Controls />
           <Background gap={16} />
         </ReactFlow>
+
+        {/* Menú contextual para editar nodos */}
+        {isContextMenuVisible && (
+          <div 
+            className="node-context-menu"
+            style={{
+              position: 'absolute',
+              left: contextMenuPosition.x + 10,
+              top: contextMenuPosition.y - 10,
+              zIndex: 1000
+            }}
+          >
+            <div 
+              className={`context-menu-header ${isDragging ? 'dragging' : ''}`}
+              onMouseDown={handleDragStart}
+            >
+              <h4>Editar Nodo</h4>
+              <button 
+                className="context-menu-close"
+                onClick={closeContextMenu}
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="context-menu-content">
+              <label className="context-menu-label">
+                Nombre:
+                <input
+                  type="text"
+                  value={editingNodeData.name}
+                  onChange={(e) => setEditingNodeData(prev => ({ ...prev, name: e.target.value }))}
+                  className="context-menu-input"
+                />
+              </label>
+              
+              <label className="context-menu-label">
+                Tiempo:
+                <input
+                  type="text"
+                  value={editingNodeData.time}
+                  onChange={(e) => setEditingNodeData(prev => ({ ...prev, time: e.target.value }))}
+                  className="context-menu-input"
+                  placeholder="ej: 2h, 30min"
+                />
+              </label>
+              
+              <label className="context-menu-label">
+                Encargado:
+                <input
+                  type="text"
+                  value={editingNodeData.inCharge}
+                  onChange={(e) => setEditingNodeData(prev => ({ ...prev, inCharge: e.target.value }))}
+                  className="context-menu-input"
+                  placeholder="Nombre del responsable"
+                />
+              </label>
+            </div>
+            
+            <div className="context-menu-actions">
+              <button 
+                className="context-menu-save"
+                onClick={updateNodeData}
+              >
+                Guardar
+              </button>
+              <button 
+                className="context-menu-cancel"
+                onClick={closeContextMenu}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

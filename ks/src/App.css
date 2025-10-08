@@ -417,6 +417,183 @@ body {
 }
 
 /* ==========================================================================
+   MENÚ CONTEXTUAL DE NODOS
+   ========================================================================== */
+
+/**
+ * Menú contextual que aparece al hacer clic en un nodo.
+ * Permite editar la información del nodo seleccionado.
+ */
+.node-context-menu {
+  background: #fff;
+  border: 2px solid #4CAF50;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 250px;
+  max-width: 300px;
+}
+
+/**
+ * Header del menú contextual.
+ * Contiene el título y el botón de cerrar.
+ * Es arrastrable para mover el menú.
+ */
+.context-menu-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid #eee;
+  background: #f8f9fa;
+  border-radius: 6px 6px 0 0;
+  cursor: move;
+  user-select: none;
+  transition: background-color 0.2s ease;
+}
+
+.context-menu-header:hover {
+  background: #e9ecef;
+}
+
+.context-menu-header.dragging {
+  background: #dee2e6;
+  cursor: grabbing;
+}
+
+.context-menu-header h4 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.context-menu-header h4::before {
+  content: "⋮⋮";
+  font-size: 12px;
+  color: #666;
+  letter-spacing: 2px;
+}
+
+/**
+ * Botón de cerrar del menú contextual.
+ */
+.context-menu-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: #666;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s ease;
+}
+
+.context-menu-close:hover {
+  background-color: #e9ecef;
+  color: #333;
+}
+
+/**
+ * Contenido del menú contextual.
+ * Contiene los campos de edición.
+ */
+.context-menu-content {
+  padding: 16px;
+}
+
+/**
+ * Etiquetas del menú contextual.
+ */
+.context-menu-label {
+  display: block;
+  margin-bottom: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+}
+
+/**
+ * Inputs del menú contextual.
+ */
+.context-menu-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  margin-top: 4px;
+  box-sizing: border-box;
+  transition: border-color 0.2s ease;
+}
+
+.context-menu-input:focus {
+  outline: none;
+  border-color: #4CAF50;
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+}
+
+/**
+ * Acciones del menú contextual.
+ * Contiene los botones Guardar y Cancelar.
+ */
+.context-menu-actions {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid #eee;
+  background: #f8f9fa;
+  border-radius: 0 0 6px 6px;
+}
+
+/**
+ * Botón de guardar del menú contextual.
+ */
+.context-menu-save {
+  flex: 1;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.context-menu-save:hover {
+  background: #45a049;
+}
+
+/**
+ * Botón de cancelar del menú contextual.
+ */
+.context-menu-cancel {
+  flex: 1;
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.context-menu-cancel:hover {
+  background: #5a6268;
+}
+
+/* ==========================================================================
    FORMULARIO DE CREACIÓN DE NODOS
    ========================================================================== */
 
