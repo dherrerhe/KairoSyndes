@@ -30,6 +30,8 @@ import 'reactflow/dist/style.css';
 // Importación del componente de nodo personalizado
 import CustomNode from './CustomNode';
 import EdgeEditorPanel from './EdgeEditorPanel';
+import { useLocation } from 'react-router-dom';
+
 
 /**
  * Configuración de tipos de nodos personalizados para ReactFlow.
@@ -94,9 +96,32 @@ const initialEdges = [{ id: 'e1-2', source: '1', target: '2', label: 'dependenci
  * <FlowComponent />
  */
 export default function FlowComponent() {
+
+  
   // Referencia al contenedor del ReactFlow para cálculos de posición
   const reactFlowWrapper = useRef(null);
   const reactFlowInstance = useRef(null);
+
+  const location = useLocation();
+  const params = location ? new URLSearchParams(location.search) : new URLSearchParams(window.location.search);
+  const workflowId = params.get('workflowId');
+
+  const loadTemplateFromStorage = () => {
+    if (!workflowId) return null;
+    try {
+      const raw = localStorage.getItem(`workflow_data_${workflowId}`);
+      if (!raw) return null;
+      return JSON.parse(raw); // { nodes, edges }
+    } catch (err) {
+      console.warn('No se pudo cargar plantilla del workflow:', err);
+      return null;
+    }
+  };
+
+  // usarlo para inicializar:
+  const tpl = loadTemplateFromStorage();
+  const nodesToUse = tpl?.nodes?.length ? tpl.nodes : initialNodes;
+  const edgesToUse = tpl?.edges?.length ? tpl.edges : initialEdges;
 
   // Estados para manejar nodos y aristas del diagrama de flujo
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
@@ -126,6 +151,8 @@ export default function FlowComponent() {
 
   // Hook de ReactFlow para proyección de coordenadas
   const { project } = useReactFlow();
+
+  
 
   /**
    * Función para actualizar los datos de un nodo específico.
@@ -513,7 +540,7 @@ export default function FlowComponent() {
           <li>Selecciona una arista para editar su etiqueta o eliminarla</li>
         </ul>
 
-        {/* --- NUEVO: Editor de aristas en el panel lateral --- */}
+        {/* Editor de aristas en el panel lateral */}
          {selectedEdge ? (
            <div className="edge-editor-region">
              <h4>Editar arista</h4>

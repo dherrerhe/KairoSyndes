@@ -25,7 +25,7 @@ import { GiHamburgerMenu } from "react-icons/gi";
 
 // Importaciones de páginas
 import { WorkSpace } from './pages/WorkSpace';
-import { Home } from './pages/Home';
+import Home from './pages/Home';
 
 /**
  * Componente principal de la aplicación KairoSyndes.
