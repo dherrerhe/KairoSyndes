@@ -9,7 +9,7 @@
   justify-content: center;         /* Centra horizontalmente */
   align-items: center;             /* Centra verticalmente */
   min-height: 100vh;              /* Altura mínima de toda la ventana */
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);  /* Fondo degradado azul-púrpura */
+  background: #e3f2fd;  /* Fondo azul claro sólido */
   padding: 20px;                   /* Espaciado interno de 20px */
 }
 
@@ -151,33 +151,4 @@
 .login-button:disabled:hover {
   transform: none;                /* Sin transformación */
   box-shadow: none;              /* Sin sombra */
-}
-
-/* ==========================================================================
-   DISEÑO RESPONSIVO - Adaptación para dispositivos móviles
-   ========================================================================== */
-
-/* Estilos para pantallas pequeñas (móviles) */
-@media (max-width: 480px) {
-  /* Ajustes para la tarjeta en móviles */
-  .login-card {
-    padding: 30px 20px;          /* Menos espaciado interno */
-    margin: 10px;                 /* Margen pequeño */
-  }
-  
-  /* Título más pequeño en móviles */
-  .login-title {
-    font-size: 24px;             /* Tamaño de fuente más pequeño */
-  }
-  
-  /* Campos de entrada más pequeños en móviles */
-  .form-input {
-    font-size: 14px;             /* Tamaño de fuente más pequeño */
-  }
-  
-  /* Botón más pequeño en móviles */
-  .login-button {
-    font-size: 14px;             /* Tamaño de fuente más pequeño */
-    padding: 12px 16px;          /* Menos espaciado interno */
-  }
 }
