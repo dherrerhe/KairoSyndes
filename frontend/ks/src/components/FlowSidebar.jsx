@@ -1,71 +1,90 @@
 // Este componente es el sidebar para crear nodos y mostrar controles básicos.
 import React, { useState } from 'react';
+import '../fcStyles/FlowSidebar.css';
 
 
 // Sidebar para crear nodos y otros controles laterales del flujo
 export default function FlowSidebar({ onAddNode, onResetFlow, children }) {
+  // Estados locales para los inputs del formulario (nombre, tiempo, responsable)
   const [name, setName] = useState('');
   const [time, setTime] = useState('');
   const [inCharge, setInCharge] = useState('');
 
+  // Handler para el formulario de agregar nodo
   const handleAddNode = (e) => {
-    e.preventDefault();
-    if (!name.trim()) return;
+    e.preventDefault(); // Prevenir refresco del formulario por el submit
+    if (!name.trim()) return; // No crear si nombre vacío
     if (onAddNode) {
+      // Invoca el callback recibido con los datos del nuevo nodo
       onAddNode({
         name: name.trim(),
         time: time.trim(),
         inCharge: inCharge.trim(),
       });
     }
+    // Limpia los inputs después de agregar
     setName('');
     setTime('');
     setInCharge('');
   };
 
   return (
-    <aside className="flow-sidebar" style={{padding: 16, borderRight: '1px solid #ccc', width: 260, background: '#fafbfc'}}>
+    <aside className="flow-sidebar">
       <h3>Crear nuevo nodo</h3>
-      <form onSubmit={handleAddNode} style={{marginBottom: 16}}>
+      {/* Formulario para crear nodos */}
+      <form onSubmit={handleAddNode} className="fs-form">
         <div>
-          <label>Nombre<br />
+          <label>
+            Nombre<br />
             <input
               type="text"
               value={name}
               required
               onChange={e => setName(e.target.value)}
               placeholder="Nombre del nodo"
-              style={{width: '100%'}}
+              className="fs-input"
             />
           </label>
         </div>
         <div>
-          <label>Tiempo<br />
+          <label>
+            Tiempo<br />
             <input
               type="text"
               value={time}
               onChange={e => setTime(e.target.value)}
               placeholder="Duración/tiempo (opcional)"
-              style={{width: '100%'}}
+              className="fs-input"
             />
           </label>
         </div>
         <div>
-          <label>Responsable<br />
+          <label>
+            Responsable<br />
             <input
               type="text"
               value={inCharge}
               onChange={e => setInCharge(e.target.value)}
               placeholder="Responsable (opcional)"
-              style={{width: '100%'}}
+              className="fs-input"
             />
           </label>
         </div>
-        <button type="submit" style={{marginTop: 10}}>Agregar nodo</button>
+        {/* Botón para agregar nodo */}
+        <button type="submit" className="fs-button">
+          Agregar nodo
+        </button>
       </form>
 
+      {/* Botón para resetear el flujo (si se proporciona onResetFlow) */}
       {onResetFlow && (
-        <button type="button" onClick={onResetFlow} style={{marginBottom: 16, background:'#e8e8e8', border:0, padding:8}}>Resetear flujo</button>
+        <button
+          type="button"
+          onClick={onResetFlow}
+          className="fs-reset-button"
+        >
+          Resetear flujo
+        </button>
       )}
 
       {/* Aquí puedes agregar más controles o children (por ejemplo, plantillas, importar/exportar, etc) */}
@@ -73,36 +92,3 @@ export default function FlowSidebar({ onAddNode, onResetFlow, children }) {
     </aside>
   );
 }
-
-
-// === Cambios necesarios en FlowComponent.jsx ====
-//
-// 1. Importa el FlowSidebar:
-//    import FlowSidebar from './FlowSidebar';
-//
-// 2. Mueve del estado y handlers de creación de nodos a este Sidebar:
-//    Quita los formularios/inputs de nodo NUEVO que estaban en FlowComponent
-//    y usa en su lugar un callback como:
-//
-//    const handleAddNode = ({name, time, inCharge}) => {
-//      setNodes(ns => [
-//        ...ns,
-//        {
-//          id: getId(),
-//          type: 'custom',
-//          position: { x: 120 + Math.random()*200, y: 120 + Math.random()*80 },
-//          data: { name, time, inCharge }
-//        }
-//      ]);
-//    };
-//
-// 3. Usa el sidebar en tu layout así:
-//   <div style={{display: 'flex'}}>
-//     <FlowSidebar onAddNode={handleAddNode} onResetFlow={...} />
-//     <div ref={reactFlowWrapper} style={{ flex: 1, height: ... }}>
-//       <ReactFlow ...
-//   </div>
-//
-// 4. Elimina de FlowComponent cualquier <form> para crear nodos y su estado relacionado, pues ahora lo lleva el Sidebar.
-//
-// Puedes pasarle también otros handlers al Sidebar según lo requieras (reset, importar, etc).

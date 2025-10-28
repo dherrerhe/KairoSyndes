@@ -1,188 +1,19 @@
 /**
  * FlowComponent.jsx — versión corregida para persistencia y uso correcto de callbacks
  */
-// ==========================================================
-// AYUDA PARA DIVIDIR EL CÓDIGO EN MÓDULOS/ARCHIVOS SEPARADOS
-// ==========================================================
-//
-// Sugerencias para dividir este FlowComponent.jsx en secciones reutilizables.
-//
-// 1. CustomNode (ya está en './CustomNode') ✅
-//    El nodo personalizado, ya está en su archivo propio. Asegúrate de que todos los props
-//    y callbacks importantes estén bien tipados/documentados ahí. Considera mover más lógica
-//    allí si lo deseas (por ejemplo, la edición inline de nodos).
-//
-// 2. EdgeEditorPanel (ya está en './EdgeEditorPanel') ✅
-//    El panel para editar aristas. Mantén la lógica de edición de edges en este archivo, y
-//    si crece mucho, considera dividirlo tanto en UI como la lógica de estado.
-//
-// Importa utilidades extraídas para IDs y persistencia de workflows
-
-// Según la estructura de tu proyecto (por ejemplo, tienes frontend/ks/src/components/),
-// lo ideal es ubicar los helpers/utilidades en una carpeta cercana a donde serán más usados
-// pero separada de los "componentes" React puros. Así:
-//
-// Opción recomendada (sencilla y clara):
-//   frontend/ks/src/components/flowUtils.js
-//
-// Esto permite importar desde cualquier archivo de componentes de React Flow así:
-//   import { getId, saveWorkflowToLocalStorage, ... } from './flowUtils';
-//
-// Si en el futuro quieres aún más orden:
-// Puedes crear una subcarpeta "utils" o "helpers" dentro de components:
-//   frontend/ks/src/components/utils/flowUtils.js
-// o
-//   frontend/ks/src/components/helpers/flowUtils.js
-//
-// Pero para este tamaño de proyecto y uso específico para FlowComponent, la primera opción es suficiente.
-//
-// 4. hooks/useWorkflow.js
-//    - Si hay mucha lógica de cargar/guardar/actualizar/workflow, puedes encapsular toda la lógica
-//      de estado (nodes, edges, feedback, carga, persistencia) en un custom hook.
-//
-// 5. FlowSidebar.jsx
-//    - Extrae el sidebar: la parte del formulario para crear nodos y la lista de plantillas o controles
-//      que no sean el canvas en sí. El sidebar podría recibir por props los handlers para crear nodos.
-//
-// 6. FlowToolbar.jsx (opcional)
-//    - Si tienes más controles aparte del sidebar: botones de zoom, guardar, exportar, etc.
-//      Puedes separar esa barra de herramientas.
-//
-// 7. FlowCanvas.jsx
-//    - Extrae el componente que renderiza <ReactFlow ...> con los nodos, edges, y sus listeners.
-//      Recibe todos los props de nodos/aristas/callbacks desde FlowComponent o desde el hook.
-//
-// 8. styles/FlowComponent.module.css
-//    - Extrae los estilos CSS a módulos, para mejor mantenimiento.
-//
-// Ejemplo de estructura final sugerida:
-// frontend/ks/src/components/FlowComponent/
-//   FlowComponent.jsx         <-- el contenedor general, reparto de contextos/handlers
-//   FlowSidebar.jsx           <-- la barra lateral (creación de nodos)
-//   FlowCanvas.jsx            <-- solo el canvas de ReactFlow
-//   FlowToolbar.jsx           <-- barra superior de acciones (opcional)
-//   CustomNode.jsx
-//   EdgeEditorPanel.jsx
-//   flowUtils.js
-//   hooks/
-//      useWorkflow.js
-//   styles/
-//      FlowComponent.module.css
-//
-// ==========================================================
-// Pasos prácticos:
-// - Extrae primero los helpers (utils) y componentes UI más obvios.
-// - Refactoriza a hooks si el estado y efectos son reutilizables.
-// - Ten cuidado de pasar bien los handlers/props entre archivos. Usa context si muchos props bajan en cascada.
-// - Enfócate primero en separar visualmente el sidebar y el canvas, facilitará futuras mejoras.
-// ==========================================================
-// == Integración del FlowSidebar y callback para crear nodos ==
-
-/*
-  1. FlowSidebar debe estar importado arriba:
-      import FlowSidebar from './FlowSidebar';
-
-  2. Aquí definimos el handler para crear nodos nuevos, y lo pasamos al Sidebar.
-     Recuerda que el estado de nodos debe existir (usa useNodesState u otro).
-*/
-
-
-
-// --- Layout principal: sidebar a la izquierda, canvas a la derecha
-//    NOTA: El resto del UI debe estar encapsulado en ReactFlowProvider
-
-/*
-  Ejemplo de integración en el render (JSX):
-
-  <div style={{ display: 'flex', height: '100%' }}>
-    <FlowSidebar onAddNode={handleAddNode} onResetFlow={handleResetFlow} />
-    <div ref={reactFlowWrapper} style={{ flex: 1, height: '100%' }}>
-      <ReactFlowProvider>
-        <ReactFlow ... />
-      </ReactFlowProvider>
-    </div>
-  </div>
-*/
+// 
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import ReactFlow, {
-  ReactFlowProvider,
-  addEdge,
-  useNodesState,
-  useEdgesState,
-  MiniMap,
-  Controls,
-  Background
-} from 'reactflow';
+import { ReactFlowProvider, addEdge, useNodesState, useEdgesState } from 'reactflow';
 import 'reactflow/dist/style.css';
 import FlowSidebar from './FlowSidebar';
+import FlowToolbar from './FlowToolbar';
 
 import CustomNode from './CustomNode';
 import EdgeEditorPanel from './EdgeEditorPanel';
 import { useLocation } from 'react-router-dom';
-import {
-  getId,
-  saveWorkflowToLocalStorage,
-  loadWorkflowFromLocalStorage,
-  limpiarDatosNodoParaSerializar,
-} from './flowUtils';
-// Implementa el handler para agregar nodos desde el sidebar.
-// Recuerda: el estado de nodos está gestionado por useNodesState arriba.
-const handleAddNode = useCallback(
-  ({ name, time, inCharge }) => {
-    setNodes((nds) => [
-      ...nds,
-      {
-        id: getId(),
-        type: 'custom',
-        position: { x: 120 + Math.random() * 200, y: 120 + Math.random() * 80 },
-        data: { name, time, inCharge }
-      }
-    ]);
-  },
-  [setNodes]
-);
-// El handler handleAddNode ya está declarado correctamente arriba para ser pasado al FlowSidebar.
-// No es necesario agregar más código aquí a menos que quieras registrar los nuevos nodos en localStorage al agregarlos.
-// Si quieres que cada vez que agregues un nodo se guarde el flujo automáticamente, puedes hacerlo así (opcional):
-
-/*
-// --- Opcional: guardar al agregar nodo ---
-const handleAddNode = useCallback(
-  ({ name, time, inCharge }) => {
-    setNodes((nds) => {
-      const nuevos = [
-        ...nds,
-        {
-          id: getId(),
-          type: 'custom',
-          position: { x: 120 + Math.random() * 200, y: 120 + Math.random() * 80 },
-          data: { name, time, inCharge }
-        }
-      ];
-      // Guardar al agregar nodo
-      if (workflowId) saveWorkflowToLocalStorage(workflowId, nuevos, edges);
-      return nuevos;
-    });
-  },
-  [setNodes, workflowId, edges]
-);
-*/
-
-
-// Handler para resetear el flujo (borrar y poner initialNodes/initialEdges)
-const handleResetFlow = useCallback(() => {
-  setNodes(initialNodes);
-  setEdges(initialEdges);
-  setFeedback('Flujo reseteado.');
-  setTimeout(() => setFeedback(''), 1700);
-}, [setNodes, setEdges]);
-
-
+import { getId, saveWorkflowToLocalStorage, loadWorkflowFromLocalStorage, limpiarDatosNodoParaSerializar } from './flowUtils';
 const nodeTypes = { custom: CustomNode };
-
-let id = 100;
-const getId = () => `${id++}`;
 
 const initialNodes = [
   { id: '1', type: 'custom', position: { x: 250, y: 5 }, data: { name: 'Nodo A', time: '2h', inCharge: 'Usuario 1' } },
@@ -242,8 +73,8 @@ export default function FlowComponent() {
 
 // --- Handler para agregar un nodo desde el sidebar
 const handleAddNode = useCallback(({ name, time, inCharge }) => {
-  setNodes(ns => [
-    ...ns,
+  setNodes((existingNodes) => [
+    ...existingNodes,
     {
       id: getId(),
       type: 'custom',
@@ -253,13 +84,13 @@ const handleAddNode = useCallback(({ name, time, inCharge }) => {
   ]);
 }, [setNodes]);
 
-// --- Handler opcional para resetear flujo
+// --- Handler para resetear flujo
 const handleResetFlow = useCallback(() => {
   setNodes(initialNodes);
   setEdges(initialEdges);
-  setFeedback('');
-  id = 100;
-}, []);
+  setFeedback('Flujo reseteado.');
+  setTimeout(() => setFeedback(''), 1700);
+}, [setNodes, setEdges]);
 
   // Dragging context menu
   const [isDragging, setIsDragging] = useState(false);
@@ -482,8 +313,61 @@ const handleResetFlow = useCallback(() => {
   }, []);
 
   // -------------------------
+  // Toolbar handlers: zoom, fit, save, export
+  // -------------------------
+  const handleZoomIn = useCallback(() => {
+    if (reactFlowInstance.current?.zoomIn) {
+      reactFlowInstance.current.zoomIn({ duration: 200 });
+    }
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    if (reactFlowInstance.current?.zoomOut) {
+      reactFlowInstance.current.zoomOut({ duration: 200 });
+    }
+  }, []);
+
+  const handleFitView = useCallback(() => {
+    if (reactFlowInstance.current?.fitView) {
+      reactFlowInstance.current.fitView({ padding: 0.2, duration: 200 });
+    }
+  }, []);
+
+  const handleExport = useCallback(() => {
+    try {
+      const instanceNodes = reactFlowInstance?.current?.getNodes?.() ?? nodes;
+
+      const nodesForExport = instanceNodes.map((n) => {
+        const safeData = { ...n.data };
+        if (safeData.onChangeLabel) delete safeData.onChangeLabel;
+        return { id: n.id, type: n.type, position: n.position, data: safeData };
+      });
+
+      const edgesForExport = edges.map((e) => {
+        const { id, source, target, label, type, animated, style } = e;
+        return { id, source, target, label, type, animated, style };
+      });
+
+      const payload = { nodes: nodesForExport, edges: edgesForExport, exportedAt: new Date().toISOString() };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `workflow_${workflowId || 'sin_id'}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setFeedback('Workflow exportado.');
+      setTimeout(() => setFeedback(''), 2200);
+    } catch (err) {
+      console.error('Error exportando workflow:', err);
+      setFeedback('Error al exportar el workflow.');
+    }
+  }, [nodes, edges, workflowId]);
+
+  // -------------------------
   // Render
   // -------------------------
+
   return (
     <div className="flow-container" style={{ display: 'flex', gap: 8, height: '100%' }}>
       <FlowSidebar onAddNode={handleAddNode} onResetFlow={handleResetFlow}>
@@ -497,19 +381,40 @@ const handleResetFlow = useCallback(() => {
         {selectedEdge ? (
           <div className="edge-editor-region">
             <h4>Editar arista</h4>
-            <EdgeEditorPanel edge={selectedEdge} onSave={(newLabel) => saveEdgeLabel(selectedEdge.id, newLabel)} onDelete={() => deleteEdge(selectedEdge.id)} onClose={() => setSelectedEdgeId(null)} />
+            <EdgeEditorPanel 
+              edge={selectedEdge} 
+              onSave={(newLabel) => saveEdgeLabel(selectedEdge.id, newLabel)} 
+              onDelete={() => deleteEdge(selectedEdge.id)} 
+              onClose={() => setSelectedEdgeId(null)} 
+            />
           </div>
         ) : (
           <div className="edge-editor-placeholder">Selecciona una arista en el canvas para editarla</div>
         )}
-        <div style={{ marginTop: 12 }}>
-          <button onClick={saveWorkflowToStorage} className="btn-primary">Guardar workflow</button>
-          {feedback && <div style={{ marginTop: 8 }} className="feedback">{feedback}</div>}
-        </div>
       </FlowSidebar>
 
+      {/* Reemplazado ReactFlow por FlowCanvas aquí para no repetir lógica ya modularizada */}
       <div ref={reactFlowWrapper} className="flow-canvas-container" style={{ flex: 1, position: 'relative', height: '720px' }}>
-        <ReactFlow
+        <FlowToolbar
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
+          onFitView={handleFitView}
+          onSave={saveWorkflowToStorage}
+          onExport={handleExport}
+          extraActions={() => (
+            <button
+              type="button"
+              className="toolbar-btn"
+              title="Añadir nodo centrado"
+              onClick={() => createNodeCentered('Nuevo nodo', '', '', 'custom')}
+            >
+              (+) Nodo centrado
+            </button>
+          )}
+          style={{ position: 'sticky', top: 0, zIndex: 2, background: '#fff' }}
+        />
+        {feedback && <div style={{ marginTop: 8 }} className="feedback">{feedback}</div>}
+        <FlowCanvas
           nodes={nodes}
           edges={edges}
           onNodesChange={onNodesChange}
@@ -519,14 +424,8 @@ const handleResetFlow = useCallback(() => {
           onNodeClick={onNodeClick}
           nodeTypes={nodeTypes}
           onEdgeClick={onEdgeClick}
-          fitView
           onInit={onInit}
-          style={{ width: '100%', height: '100%' }}
-        >
-          <MiniMap nodeColor="rgb(179, 64, 64)" />
-          <Controls />
-          <Background gap={16} />
-        </ReactFlow>
+        />
 
         {isContextMenuVisible && (
           <div className="node-context-menu" style={{ position: 'absolute', left: contextMenuPosition.x + 10, top: contextMenuPosition.y - 10, zIndex: 1000 }}>
