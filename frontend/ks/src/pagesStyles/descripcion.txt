@@ -1,1 +1,5 @@
-# carpeta para estilos específicos de las páginas
+Instrucciones - pagesStyles/
+
+- Estilos específicos de cada página (vistas) viven aquí.
+- Nombra los archivos como la página: Login.css para pages/Login.js.
+- Evita estilos globales; limítate al alcance de la página.

@@ -5,6 +5,11 @@
  */
 
 import React from 'react';
+import { FaMagnifyingGlassPlus } from "react-icons/fa6";
+import { FaMagnifyingGlassMinus } from "react-icons/fa6";
+import { MdOutlineSettingsOverscan } from "react-icons/md";
+import { MdOutlineSaveAlt } from "react-icons/md";
+import { PiExportBold } from "react-icons/pi";
 
 export default function FlowToolbar({
   onZoomIn,
@@ -24,7 +29,7 @@ export default function FlowToolbar({
         onClick={onZoomIn}
         type="button"
       >
-        (icon lupa)+
+        <FaMagnifyingGlassPlus />       {/*(icon lupa) + */}
       </button>
       <button 
         className="toolbar-btn" 
@@ -32,7 +37,7 @@ export default function FlowToolbar({
         onClick={onZoomOut}
         type="button"
       >
-        (icon lupa)-
+        <FaMagnifyingGlassMinus />      {/*(icon lupa) - */}
       </button>
       <button 
         className="toolbar-btn" 
@@ -40,7 +45,7 @@ export default function FlowToolbar({
         onClick={onFitView}
         type="button"
       >
-        (icon) Ajustar
+        <MdOutlineSettingsOverscan />       {/*(icon) Ajustar*/}
       </button>
 
       <span style={{ marginLeft: 12, marginRight: 4, fontSize: 20 }}>|</span>
@@ -51,7 +56,7 @@ export default function FlowToolbar({
         onClick={onSave}
         type="button"
       >
-        (icon) Guardar
+        <MdOutlineSaveAlt /> Guardar
       </button>
       {onExport && (
         <button 
@@ -60,7 +65,7 @@ export default function FlowToolbar({
           onClick={onExport}
           type="button"
         >
-          (icon) Exportar
+          <PiExportBold /> Exportar
         </button>
       )}
 

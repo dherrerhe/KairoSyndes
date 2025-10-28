@@ -9,7 +9,13 @@
 
 // Importaciones de estilos globales
 import 'reactflow/dist/style.css';
-import './App.css';
+import './styles/App.css';
+// Estilos extraídos de App.css
+import './fcStyles/FlowComponent.css';
+import './fcStyles/FlowCanvas.css';
+import './fcStyles/CustomNode.css';
+import './fcStyles/NodeContextMenu.css';
+import './fcStyles/Modal.css';
 
 // Importaciones de React y hooks
 import { useState } from 'react';

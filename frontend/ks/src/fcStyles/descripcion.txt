@@ -1,1 +1,6 @@
-# carpeta para estilos específicos de componentes
+Instrucciones - fcStyles/
+
+- Estilos específicos de componentes (scoped por clase) viven aquí.
+- Nombra los archivos como el componente: FlowSidebar.css para FlowSidebar.jsx.
+- No coloques resets globales aquí; usa styles/index.css para eso.
+- Prefiere clases con prefijo del componente (ej. .flow-sidebar, .fs-*) para evitar colisiones.

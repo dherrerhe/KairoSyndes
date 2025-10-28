@@ -1,0 +1,91 @@
+.flow-container {
+  display: flex;
+  height: 610px;
+  gap: 8px;
+}
+
+.flow-panel {
+  width: 220px;
+  padding: 12px;
+  border-right: 1px solid #eee;
+  box-sizing: border-box;
+  background: #fff;
+}
+
+.flow-panel-title {
+  margin-top: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+.flow-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
+  margin-bottom: 8px;
+  transition: background-color 0.2s ease;
+}
+
+.flow-panel-header:hover {
+  background-color: #f5f5f5;
+  border-radius: 4px;
+  padding: 8px 4px;
+}
+
+.flow-arrow {
+  font-size: 12px;
+  color: #666;
+  transition: transform 0.3s ease;
+  user-select: none;
+}
+
+.flow-arrow.expanded {
+  transform: rotate(180deg);
+}
+
+.flow-form-container {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease-out;
+}
+
+.flow-form-container.expanded {
+  max-height: 500px;
+  transition: max-height 0.3s ease-in;
+}
+
+.flow-instructions {
+  margin-top: 12px;
+  font-size: 13px;
+  color: #555;
+  line-height: 1.4;
+}
+
+.flow-separator {
+  margin-top: 12px;
+  border: none;
+  border-top: 1px solid #eee;
+}
+
+.flow-tips-title {
+  margin: 12px 0 8px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+.flow-tips-list {
+  padding-left: 18px;
+  font-size: 13px;
+  color: #666;
+  line-height: 1.5;
+}
+
+.flow-tips-list li {
+  margin-bottom: 4px;
+}
+

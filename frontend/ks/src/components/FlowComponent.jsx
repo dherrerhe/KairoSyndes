@@ -8,6 +8,7 @@ import { ReactFlowProvider, addEdge, useNodesState, useEdgesState } from 'reactf
 import 'reactflow/dist/style.css';
 import FlowSidebar from './FlowSidebar';
 import FlowToolbar from './FlowToolbar';
+import FlowCanvas from './FlowCanvas';
 
 import CustomNode from './CustomNode';
 import EdgeEditorPanel from './EdgeEditorPanel';
@@ -369,7 +370,7 @@ const handleResetFlow = useCallback(() => {
   // -------------------------
 
   return (
-    <div className="flow-container" style={{ display: 'flex', gap: 8, height: '100%' }}>
+    <div className="flow-container" style={{ display: 'flex', gap: 8 }}>
       <FlowSidebar onAddNode={handleAddNode} onResetFlow={handleResetFlow}>
         <hr className="flow-separator" />
         <h4 className="flow-tips-title">Tips</h4>
@@ -394,7 +395,7 @@ const handleResetFlow = useCallback(() => {
       </FlowSidebar>
 
       {/* Reemplazado ReactFlow por FlowCanvas aquí para no repetir lógica ya modularizada */}
-      <div ref={reactFlowWrapper} className="flow-canvas-container" style={{ flex: 1, position: 'relative', height: '720px' }}>
+      <div ref={reactFlowWrapper} className="flow-canvas-container" style={{ flex: 1, position: 'relative' }}>
         <FlowToolbar
           onZoomIn={handleZoomIn}
           onZoomOut={handleZoomOut}
