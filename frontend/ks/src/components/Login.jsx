@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 // Importación de React Router para navegación entre páginas
 import { useNavigate } from 'react-router-dom';
 // Importación de los estilos CSS específicos del componente Login
-import '../styles/c_Styles/Login.css';
+import '../styles/pagesStyles/Login.css';
 
 // Componente funcional Login que maneja el formulario de autenticación
 const Login = () => {
