@@ -1,0 +1,27 @@
+.flow-sidebar {
+  padding: 16px;
+  border-right: 1px solid #ccc;
+  width: 260px;
+  background: #fafbfc;
+}
+
+.fs-form {
+  margin-bottom: 16px;
+}
+
+.fs-input {
+  width: 100%;
+}
+
+.fs-button {
+  margin-top: 10px;
+}
+
+.fs-reset-button {
+  margin-bottom: 16px;
+  background: #e8e8e8;
+  border: 0;
+  padding: 8px;
+  cursor: pointer;
+}
+

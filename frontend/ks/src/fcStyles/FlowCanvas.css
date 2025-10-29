@@ -1,0 +1,12 @@
+.flow-canvas-container {
+  flex: 1;
+  position: relative;
+  background: #fafafa;
+  height: 100%;
+}
+
+.flow-canvas {
+  width: 100%;
+  height: 100%;
+}
+

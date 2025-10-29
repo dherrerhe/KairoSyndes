@@ -1,0 +1,6 @@
+Instrucciones - components/
+
+- Coloca aquí componentes reutilizables (UI y lógicos) sin depender de rutas de páginas.
+- Cada componente debe tener su propio archivo de estilos en fcStyles/ si requiere estilos.
+- Evita lógica de datos (fetch/auth); esa vive en pages/ o en hooks/.
+- Nombra componentes en PascalCase, por ejemplo: FlowSidebar.jsx, FlowToolbar.jsx.

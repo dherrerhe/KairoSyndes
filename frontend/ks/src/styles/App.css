@@ -1,0 +1,1011 @@
+/**
+ * @fileoverview Estilos principales de la aplicación KairoSyndes
+ * @description Archivo CSS que contiene todos los estilos para la aplicación,
+ * incluyendo el layout principal, sidebar de navegación, y componentes de React Flow.
+ * @author KairoSyndes
+ * @version 1.0.0
+ * @since 2024
+ */
+
+/* ==========================================================================
+   ESTILOS GLOBALES Y RESET
+   ========================================================================== */
+
+
+/**
+ * Contenedor principal de la aplicación.
+ * Centra el contenido y establece la estructura base.
+ */
+.App {
+  text-align: center;
+}
+
+/**
+ * Reset de estilos para el body.
+ * Establece márgenes y padding a 0, y define la fuente principal.
+ */
+body {
+  box-sizing: border-box;
+  margin: 0%;
+  padding: 0%;
+  font-family: 'Roboto', sans-serif;
+}
+
+/* ==========================================================================
+   HEADER PRINCIPAL
+   ========================================================================== */
+
+/**
+ * Header principal de la aplicación.
+ * Contiene el menú hamburguesa y establece el estilo del encabezado.
+ */
+.App-header {
+  padding: 10px 20px;
+  background: rgb(35, 33, 83);
+  height: 50px;
+  width: auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+/* ==========================================================================
+   SIDEBAR DE NAVEGACIÓN
+   ========================================================================== */
+
+/**
+ * Sidebar principal de navegación.
+ * Se posiciona de forma fija y se desliza desde la izquierda.
+ * Inicialmente está oculto (left: -100%).
+ */
+.sidenav {
+  width: 240px;
+  background: black;
+  position: fixed;
+  top: 0;
+  left: -100%;
+  height: 100vh;
+  padding: 0 30px;
+  transition: all 0.3s ease;
+  text-align: left;
+  align-items: start;
+  z-index: 1000;
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
+}
+
+/**
+ * Estado activo del sidebar.
+ * Cuando está activo, se desliza hacia la derecha (left: 0).
+ */
+.sidenav.active {
+  left: 0;
+}
+
+/**
+ * Header del sidebar con título y botón de cierre.
+ * Contiene el título "KairoSyndes" y el botón X para cerrar.
+ */
+.sidenav-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 0;
+  border-bottom: 1px solid #333;
+  margin-bottom: 10px;
+}
+
+/**
+ * Título del sidebar.
+ * Estilo para el texto "KairoSyndes" en el header.
+ */
+.sidenav-title {
+  color: white;
+  font-family: cursive;
+  font-size: 18px;
+  font-weight: bold;
+  margin: 0;
+  letter-spacing: 1px;
+}
+
+/**
+ * Botón de cierre del sidebar.
+ * Estilo para el botón X que cierra el sidebar.
+ */
+.close-btn {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/**
+ * Estado hover del botón de cierre.
+ * Efecto visual cuando se pasa el mouse sobre el botón.
+ */
+.close-btn:hover {
+  background-color: #333;
+  color: #ff4444;
+  transform: scale(1.1);
+}
+
+/* ==========================================================================
+   OVERLAY DEL SIDEBAR
+   ========================================================================== */
+
+/**
+ * Overlay semi-transparente que aparece cuando el sidebar está abierto.
+ * Permite cerrar el sidebar haciendo clic fuera de él.
+ */
+.sidenav-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+}
+
+/**
+ * Estado activo del overlay.
+ * Cuando está activo, se hace visible y opaco.
+ */
+.sidenav-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* ==========================================================================
+   MENÚ DE NAVEGACIÓN
+   ========================================================================== */
+
+/**
+ * Lista principal del menú de navegación.
+ * Establece el estilo base para la lista de enlaces.
+ */
+.sidenav ul {
+  list-style: none;
+  margin: 20px 0;
+  padding: 0;
+}
+
+/**
+ * Iconos dentro de los enlaces del menú.
+ * Establece el espaciado y posicionamiento de los iconos.
+ */
+.sidenav ul svg {
+  margin: 0 10px -2px 3px; /* top - right - bottom - left */
+}
+
+/**
+ * Elementos de la lista del menú.
+ * Establece el espaciado entre elementos de navegación.
+ */
+.sidenav ul li {
+  list-style-type: none;
+  margin: 2px 0;
+}
+
+/**
+ * Enlaces del menú de navegación.
+ * Establece el estilo base para los enlaces del sidebar.
+ */
+.sidenav ul li a {
+  color: white;
+  text-decoration: none;
+  font-size: 16px;
+  display: block;
+  padding: 10px 15px;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+}
+
+/**
+ * Estado visited de los enlaces.
+ * Mantiene el color blanco para enlaces visitados.
+ */
+.sidenav ul li a:visited {
+  color: white;
+}
+
+/**
+ * Estados hover y active de los enlaces.
+ * Efecto visual cuando se pasa el mouse o está activo.
+ */
+.sidenav ul li a:hover,
+.sidenav ul li a.active {
+  color: #4CAF50;
+  background-color: rgba(76, 175, 80, 0.1);
+  transform: translateX(5px);
+}
+
+/* ==========================================================================
+   ICONO DEL MENÚ HAMBURGUESA
+   ========================================================================== */
+
+/**
+ * Icono del menú hamburguesa en el header.
+ * Establece el estilo base para el ícono de navegación.
+ */
+.App-header svg {
+  font-size: 25px;
+  cursor: pointer;
+  color: white;
+  transition: color 0.3s ease;
+}
+
+/**
+ * Estado hover del icono del menú hamburguesa.
+ * Cambia el color cuando se pasa el mouse sobre él.
+ */
+.App-header svg:hover {
+  color: #4CAF50;
+}
+
+/* ==========================================================================
+   COMPONENTE REACT FLOW - ESTILOS PRINCIPALES
+   ========================================================================== */
+
+/**
+ * Contenedor principal del componente React Flow.
+ * Establece el layout flex para el panel lateral y el canvas.
+ */
+.flow-container {
+  display: flex;
+  height: 610px;
+  gap: 8px;
+}
+
+/**
+ * Panel lateral con formulario para crear nodos.
+ * Contiene todos los controles para la creación y configuración de nodos.
+ */
+.flow-panel {
+  width: 220px;
+  padding: 12px;
+  border-right: 1px solid #eee;
+  box-sizing: border-box;
+  background: #fff;
+}
+
+/**
+ * Título del panel lateral.
+ * Establece el estilo para el encabezado "Crear nodo".
+ */
+.flow-panel-title {
+  margin-top: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+/* ==========================================================================
+   MENÚ DESPLEGABLE
+   ========================================================================== */
+
+/**
+ * Header del panel con título y flecha desplegable.
+ * Contiene el título y la flecha que permite expandir/contraer el menú.
+ */
+.flow-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
+  margin-bottom: 8px;
+  transition: background-color 0.2s ease;
+}
+
+.flow-panel-header:hover {
+  background-color: #f5f5f5;
+  border-radius: 4px;
+  padding: 8px 4px;
+}
+
+/**
+ * Flecha desplegable del panel.
+ * Indica visualmente si el menú está expandido o contraído.
+ */
+.flow-arrow {
+  font-size: 12px;
+  color: #666;
+  transition: transform 0.3s ease;
+  user-select: none;
+}
+
+.flow-arrow.expanded {
+  transform: rotate(180deg);
+}
+
+/**
+ * Contenedor del formulario desplegable.
+ * Se expande y contrae con animación suave.
+ */
+.flow-form-container {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease-out;
+}
+
+.flow-form-container.expanded {
+  max-height: 500px;
+  transition: max-height 0.3s ease-in;
+}
+
+/* ==========================================================================
+   NODOS PERSONALIZADOS
+   ========================================================================== */
+
+.custom-node {
+  background: #fff;
+  border: 2px solid #4CAF50;
+  border-radius: 8px;
+  padding: 10px;
+  min-width: 120px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/**
+ * Nombre del nodo personalizado.
+ * Estilo para el texto principal del nodo.
+ */
+.custom-node-name {
+  font-weight: 600;
+  color: #333;
+  text-align: center;
+  margin-bottom: 5px;
+  font-size: 14px;
+}
+
+/**
+ * Información adicional del nodo.
+ * Contenedor para campos adicionales como tiempo y responsable.
+ */
+.custom-node-info {
+  font-size: 12px;
+  color: #666;
+}
+
+/**
+ * Campo individual dentro del nodo.
+ * Estilo para cada campo de información del nodo.
+ */
+.custom-node-field {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+
+/**
+ * Etiqueta del campo del nodo.
+ * Estilo para las etiquetas de los campos.
+ */
+.custom-node-label {
+  font-weight: 500;
+}
+
+/**
+ * Valor del campo del nodo.
+ * Estilo para los valores de los campos.
+ */
+.custom-node-value {
+  color: #4CAF50;
+  font-weight: 600;
+}
+
+/**
+ * Handles de conexión de los nodos personalizados.
+ * Puntos de conexión para crear aristas entre nodos.
+ */
+.custom-node-handle {
+  width: 8px;
+  height: 8px;
+  background: #4CAF50;
+  border: 2px solid #fff;
+  border-radius: 50%;
+}
+
+/* ==========================================================================
+   MENÚ CONTEXTUAL DE NODOS
+   ========================================================================== */
+
+/**
+ * Menú contextual que aparece al hacer clic en un nodo.
+ * Permite editar la información del nodo seleccionado.
+ */
+.node-context-menu {
+  background: #fff;
+  border: 2px solid #4CAF50;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 250px;
+  max-width: 300px;
+}
+
+/**
+ * Header del menú contextual.
+ * Contiene el título y el botón de cerrar.
+ * Es arrastrable para mover el menú.
+ */
+.context-menu-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid #eee;
+  background: #f8f9fa;
+  border-radius: 6px 6px 0 0;
+  cursor: move;
+  user-select: none;
+  transition: background-color 0.2s ease;
+}
+
+.context-menu-header:hover {
+  background: #e9ecef;
+}
+
+.context-menu-header.dragging {
+  background: #dee2e6;
+  cursor: grabbing;
+}
+
+.context-menu-header h4 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.context-menu-header h4::before {
+  content: "⋮⋮";
+  font-size: 12px;
+  color: #666;
+  letter-spacing: 2px;
+}
+
+/**
+ * Botón de cerrar del menú contextual.
+ */
+.context-menu-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: #666;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s ease;
+}
+
+.context-menu-close:hover {
+  background-color: #e9ecef;
+  color: #333;
+}
+
+/**
+ * Contenido del menú contextual.
+ * Contiene los campos de edición.
+ */
+.context-menu-content {
+  padding: 16px;
+}
+
+/**
+ * Etiquetas del menú contextual.
+ */
+.context-menu-label {
+  display: block;
+  margin-bottom: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+}
+
+/**
+ * Inputs del menú contextual.
+ */
+.context-menu-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  margin-top: 4px;
+  box-sizing: border-box;
+  transition: border-color 0.2s ease;
+}
+
+.context-menu-input:focus {
+  outline: none;
+  border-color: #4CAF50;
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+}
+
+/**
+ * Acciones del menú contextual.
+ * Contiene los botones Guardar y Cancelar.
+ */
+.context-menu-actions {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid #eee;
+  background: #f8f9fa;
+  border-radius: 0 0 6px 6px;
+}
+
+/**
+ * Botón de guardar del menú contextual.
+ */
+.context-menu-save {
+  flex: 1;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.context-menu-save:hover {
+  background: #45a049;
+}
+
+/**
+ * Botón de cancelar del menú contextual.
+ */
+.context-menu-cancel {
+  flex: 1;
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.context-menu-cancel:hover {
+  background: #5a6268;
+}
+
+/* ==========================================================================
+   ESTILOS DE REACT FLOW
+   ========================================================================== */
+
+/**
+ * Contenedor principal del diagrama de flujo.
+ * Establece el layout flexbox para el panel lateral y el canvas.
+ */
+.flow-container {
+  display: flex;
+  height: 100vh;
+  width: 100%;
+}
+
+/**
+ * Panel lateral del diagrama de flujo.
+ * Contiene el formulario para crear nodos y controles adicionales.
+ */
+.flow-panel {
+  width: 220px;
+  padding: 12px;
+  border-right: 1px solid #eee;
+  box-sizing: border-box;
+  background: #fff;
+}
+
+/**
+ * Canvas del diagrama de flujo.
+ * Contenedor principal donde se renderiza ReactFlow.
+ */
+.flow-canvas-container {
+  flex: 1;
+  position: relative;
+  background: #fafafa;
+}
+
+/**
+ * Canvas de ReactFlow.
+ * Establece las dimensiones completas del área de trabajo.
+ */
+.flow-canvas {
+  width: 100%;
+  height:100%;
+}
+
+/* ==========================================================================
+   FORMULARIO DE CREACIÓN DE NODOS
+   ========================================================================== */
+
+/**
+ * Etiquetas del formulario.
+ * Establece el estilo base para las etiquetas de los campos del formulario.
+ */
+.flow-form-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #555;
+}
+
+/**
+ * Campo de entrada para el label del nodo.
+ * Establece el estilo para el input de texto del label.
+ */
+.flow-form-input {
+  width: 100%;
+  margin-top: 6px;
+  padding: 6px;
+  box-sizing: border-box;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: border-color 0.3s ease;
+}
+
+/**
+ * Estado focus del campo de entrada.
+ * Cambia el color del borde cuando el campo está enfocado.
+ */
+.flow-form-input:focus {
+  outline: none;
+  border-color: #4CAF50;
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+}
+
+/**
+ * Selector de tipo de nodo.
+ * Establece el estilo para el dropdown de selección de tipo.
+ */
+.flow-form-select {
+  width: 100%;
+  margin-top: 6px;
+  padding: 6px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  background-color: white;
+  cursor: pointer;
+  transition: border-color 0.3s ease;
+}
+
+/**
+ * Estado focus del selector.
+ * Cambia el color del borde cuando el selector está enfocado.
+ */
+.flow-form-select:focus {
+  outline: none;
+  border-color: #4CAF50;
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+}
+
+/* ==========================================================================
+   BOTONES Y CONTROLES
+   ========================================================================== */
+
+/**
+ * Botón para crear nodo.
+ * Establece el estilo principal para el botón de creación de nodos.
+ */
+.flow-create-button {
+  width: 100%;
+  padding: 8px 10px;
+  cursor: pointer;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+/**
+ * Estado hover del botón de crear nodo.
+ * Efecto visual cuando se pasa el mouse sobre el botón.
+ */
+.flow-create-button:hover {
+  background-color: #45a049;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/**
+ * Estado active del botón de crear nodo.
+ * Efecto visual cuando se presiona el botón.
+ */
+.flow-create-button:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* ==========================================================================
+   INSTRUCCIONES Y AYUDA
+   ========================================================================== */
+
+/**
+ * Contenedor de instrucciones para el usuario.
+ * Establece el estilo para las instrucciones de uso del componente.
+ */
+.flow-instructions {
+  margin-top: 12px;
+  font-size: 13px;
+  color: #555;
+  line-height: 1.4;
+}
+
+/**
+ * Separador visual entre secciones.
+ * Línea divisoria entre las instrucciones y los tips.
+ */
+.flow-separator {
+  margin-top: 12px;
+  border: none;
+  border-top: 1px solid #eee;
+}
+
+/**
+ * Título de la sección de tips.
+ * Establece el estilo para el encabezado "Tips".
+ */
+.flow-tips-title {
+  margin: 12px 0 8px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+/**
+ * Lista de tips y consejos.
+ * Establece el estilo para la lista de consejos de uso.
+ */
+.flow-tips-list {
+  padding-left: 18px;
+  font-size: 13px;
+  color: #666;
+  line-height: 1.5;
+}
+
+/**
+ * Elementos de la lista de tips.
+ * Establece el estilo para cada elemento de la lista de consejos.
+ */
+.flow-tips-list li {
+  margin-bottom: 4px;
+}
+
+/* ==========================================================================
+   CANVAS DE REACT FLOW
+   ========================================================================== */
+
+/**
+ * Contenedor del canvas de React Flow.
+ * Establece el contenedor principal para el área de trabajo del diagrama.
+ */
+.flow-canvas-container {
+  flex: 1;
+  position: relative;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+/**
+ * Canvas de React Flow.
+ * Establece el estilo para el área de trabajo principal del diagrama.
+ */
+.flow-canvas {
+  width: 100%;
+  height: 100%;
+  
+}
+
+/* ==========================================================================
+   PÁGINA HOME - ESTILOS PRINCIPALES
+   ========================================================================== */
+
+/**
+ * Contenedor principal de la página Home.
+ * Centra todo el contenido vertical y horizontalmente en la pantalla.
+ */
+.home-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 70px); /* Resta la altura del header */
+  padding: 40px 20px;
+  text-align: center;
+  background-color: #f8f9fa;
+  color: #333;
+}
+
+/**
+ * Título principal de la página Home.
+ * Establece el estilo para el encabezado "Bienvenido a KairoSyndes".
+ */
+.home-container h1 {
+  font-size: 3rem;
+  font-weight: 700;
+  margin-bottom: 20px;
+  color: #333;
+  letter-spacing: 1px;
+}
+
+/**
+ * Párrafo descriptivo de la página Home.
+ * Establece el estilo para el texto descriptivo de la aplicación.
+ */
+.home-container p {
+  font-size: 1.2rem;
+  margin-bottom: 40px;
+  opacity: 0.9;
+  line-height: 1.6;
+  max-width: 600px;
+}
+
+/**
+ * Botón de navegación de la página Home.
+ * Establece el estilo para el botón que lleva al área de trabajo.
+ */
+.home-container .btn {
+  padding: 15px 30px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  border-radius: 8px;
+  background-color: #4CAF50;
+  border: none;
+  color: white;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+  cursor: pointer;
+}
+
+/**
+ * Estado hover del botón de navegación.
+ * Efecto visual cuando se pasa el mouse sobre el botón.
+ */
+.home-container .btn:hover {
+  background-color: #45a049;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+  color: white;
+}
+
+/**
+ * Estado active del botón de navegación.
+ * Efecto visual cuando se presiona el botón.
+ */
+.home-container .btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 10px rgba(76, 175, 80, 0.3);
+}
+
+/* Home / Workflows */
+.home-page {
+  padding: 20px;
+  font-family: Inter, Roboto, Arial, sans-serif;
+  color: #111827;
+}
+
+.home-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.btn-primary {
+  background: #0ea5e9;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.btn-primary:hover { background: #0284c7; }
+
+.btn-secondary {
+  background: #f3f4f6;
+  color: #111827;
+  border: 1px solid #e5e7eb;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.btn-secondary:hover { background: #e9eef2; }
+
+.btn-danger {
+  background: #ef4444;
+  color: white;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.btn-danger:hover { background: #dc2626; }
+
+.workflows-list ul { list-style: none; padding: 0; margin: 0; }
+.workflow-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid #f3f4f6;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  background: white;
+  box-shadow: 0 1px 2px rgba(16,24,40,0.03);
+}
+.workflow-info { display: flex; flex-direction: column; }
+.workflow-meta { font-size: 12px; color: #6b7280; margin-top: 6px; }
+
+/* Modal */
+.modal-backdrop {
+  position: fixed;
+  z-index: 90;
+  left: 0; top: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.modal {
+  background: white;
+  padding: 18px;
+  border-radius: 10px;
+  width: 420px;
+  max-width: calc(100% - 36px);
+  box-shadow: 0 10px 30px rgba(2,6,23,0.08);
+}
+.modal h2 { margin-top: 0; margin-bottom: 12px; }
+.form-row { margin-bottom: 12px; display: flex; flex-direction: column; gap: 6px; }
+.form-row .label { font-size: 13px; color: #374151; }
+
+/* Inputs */
+.modal input, .modal select {
+  padding: 8px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+.form-error {
+  color: #b91c1c;
+  margin-bottom: 8px;
+}
+
+/* Modal actions */
+.modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+
+/* small empty placeholder */
+.empty { color: #6b7280; padding: 12px; }
