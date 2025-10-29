@@ -1,0 +1,45 @@
+.custom-node {
+  background: #fff;
+  border: 2px solid #4CAF50;
+  border-radius: 8px;
+  padding: 10px;
+  min-width: 120px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.custom-node-name {
+  font-weight: 600;
+  color: #333;
+  text-align: center;
+  margin-bottom: 5px;
+  font-size: 14px;
+}
+
+.custom-node-info {
+  font-size: 12px;
+  color: #666;
+}
+
+.custom-node-field {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+
+.custom-node-label {
+  font-weight: 500;
+}
+
+.custom-node-value {
+  color: #4CAF50;
+  font-weight: 600;
+}
+
+.custom-node-handle {
+  width: 8px;
+  height: 8px;
+  background: #4CAF50;
+  border: 2px solid #fff;
+  border-radius: 50%;
+}
+

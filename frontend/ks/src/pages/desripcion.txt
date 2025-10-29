@@ -1,0 +1,5 @@
+Instrucciones - pages/
+
+- Coloca aquí componentes de página (rutas) que orquestan estado, datos y navegación.
+- Mantén la UI en components/ y pasa props; evita duplicar formularios o layouts aquí.
+- Nombra las páginas en PascalCase: Login.js, Home.js, WorkSpace.js.

@@ -1,27 +1,20 @@
 /**
  * FlowComponent.jsx — versión corregida para persistencia y uso correcto de callbacks
  */
+// 
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import ReactFlow, {
-  ReactFlowProvider,
-  addEdge,
-  useNodesState,
-  useEdgesState,
-  MiniMap,
-  Controls,
-  Background
-} from 'reactflow';
+import { ReactFlowProvider, addEdge, useNodesState, useEdgesState } from 'reactflow';
 import 'reactflow/dist/style.css';
+import FlowSidebar from './FlowSidebar';
+import FlowToolbar from './FlowToolbar';
+import FlowCanvas from './FlowCanvas';
 
 import CustomNode from './CustomNode';
 import EdgeEditorPanel from './EdgeEditorPanel';
 import { useLocation } from 'react-router-dom';
-
+import { getId, saveWorkflowToLocalStorage, loadWorkflowFromLocalStorage, limpiarDatosNodoParaSerializar } from './flowUtils';
 const nodeTypes = { custom: CustomNode };
-
-let id = 100;
-const getId = () => `${id++}`;
 
 const initialNodes = [
   { id: '1', type: 'custom', position: { x: 250, y: 5 }, data: { name: 'Nodo A', time: '2h', inCharge: 'Usuario 1' } },
@@ -77,7 +70,41 @@ export default function FlowComponent() {
   const [selectedNode, setSelectedNode] = useState(null);
   const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
   const [isContextMenuVisible, setIsContextMenuVisible] = useState(false);
-  const [editingNodeData, setEditingNodeData] = useState({ name: '', time: '', inCharge: '' });
+  const [editingNodeData, setEditingNodeData] = useState({ name: '', time: '', inCharge: '', ip: '' });
+
+// Función para obtener la IP real del usuario
+const getUserIP = useCallback(async () => {
+  try {
+    const response = await fetch('https://api.ipify.org?format=json');
+    const data = await response.json();
+    return data.ip;
+  } catch (error) {
+    console.warn('No se pudo obtener la IP del usuario:', error);
+    return 'IP no disponible';
+  }
+}, []);
+
+// --- Handler para agregar un nodo desde el sidebar
+const handleAddNode = useCallback(async ({ name, time, inCharge }) => {
+  const userIP = await getUserIP();
+  setNodes((existingNodes) => [
+    ...existingNodes,
+    {
+      id: getId(),
+      type: 'custom',
+      position: { x: 120 + Math.random() * 200, y: 120 + Math.random() * 80 },
+      data: { name, time, inCharge, ip: userIP }
+    }
+  ]);
+}, [setNodes, getUserIP]);
+
+// --- Handler para resetear flujo
+const handleResetFlow = useCallback(() => {
+  setNodes(initialNodes);
+  setEdges(initialEdges);
+  setFeedback('Flujo reseteado.');
+  setTimeout(() => setFeedback(''), 1700);
+}, [setNodes, setEdges]);
 
   // Dragging context menu
   const [isDragging, setIsDragging] = useState(false);
@@ -109,31 +136,49 @@ export default function FlowComponent() {
   // -------------------------
   const onConnect = useCallback((params) => setEdges((eds) => addEdge(params, eds)), [setEdges]);
 
-  const createNodeCentered = useCallback(() => {
-    const bounds = reactFlowWrapper.current?.getBoundingClientRect();
-    let position = { x: 250, y: 150 };
+  // Esta función depende de variables como newLabel, newTime, newInCharge, newType, pero NO están definidas en el código mostrado.
+  // Eso significa que createNodeCentered no funcionará correctamente si esas variables no existen como estados o props.
+  // Además, tampoco expone ni usa createNodeCentered en ningún sitio, así que falta conectarla (por ejemplo, a un botón o menú).
+  // Ejemplo mínimo de lo que le falta:
 
-    // usar reactFlowInstance.current.project si está disponible
-    if (bounds && reactFlowInstance.current?.project) {
-      const centerClient = { x: bounds.left + bounds.width / 2, y: bounds.top + bounds.height / 2 };
-      position = reactFlowInstance.current.project({
-        x: centerClient.x - bounds.left,
-        y: centerClient.y - bounds.top
-      });
-    }
+  // 1. Deben existir los estados:
+  // const [newLabel, setNewLabel] = useState('');
+  // const [newTime, setNewTime] = useState('');
+  // const [newInCharge, setNewInCharge] = useState('');
+  // const [newType, setNewType] = useState('custom');
+  // ...o debes obtener esos valores de otro input.
+  // 2. Debes invocar createNodeCentered desde algún UI (botón, menú, etc).
 
-    const newNode = {
-      id: getId(),
-      type: newType === 'custom' ? 'custom' : undefined,
-      position,
-      data:
-        newType === 'custom'
-          ? { name: newLabel, time: newTime, inCharge: newInCharge, onChangeLabel: handleChangeLabel }
-          : { label: newLabel }
-    };
+  // Si quieres solo mostrar el esqueleto correcto:
+  const createNodeCentered = useCallback(
+    async (label, time = '', inCharge = '', type = 'custom') => {
+      const userIP = await getUserIP();
+      const bounds = reactFlowWrapper.current?.getBoundingClientRect();
+      let position = { x: 250, y: 150 };
 
-    setNodes((nds) => nds.concat(newNode));
-  }, [newLabel, newTime, newInCharge, newType, handleChangeLabel, setNodes]);
+      if (bounds && reactFlowInstance.current?.project) {
+        const centerClient = { x: bounds.left + bounds.width / 2, y: bounds.top + bounds.height / 2 };
+        position = reactFlowInstance.current.project({
+          x: centerClient.x - bounds.left,
+          y: centerClient.y - bounds.top
+        });
+      }
+
+      const newNode = {
+        id: getId(),
+        type: type === 'custom' ? 'custom' : undefined,
+        position,
+        data:
+          type === 'custom'
+            ? { name: label, time, inCharge, ip: userIP, onChangeLabel: handleChangeLabel }
+            : { label }
+      };
+
+      setNodes((nds) => nds.concat(newNode));
+    },
+    [handleChangeLabel, setNodes, getUserIP]
+  );
+
 
   const onNodeClick = useCallback((event, node) => {
     event.stopPropagation();
@@ -142,7 +187,7 @@ export default function FlowComponent() {
       setContextMenuPosition({ x: event.clientX - rect.left, y: event.clientY - rect.top });
     }
     setSelectedNode(node);
-    setEditingNodeData({ name: node.data.name || '', time: node.data.time || '', inCharge: node.data.inCharge || '' });
+    setEditingNodeData({ name: node.data.name || '', time: node.data.time || '', inCharge: node.data.inCharge || '', ip: node.data.ip || '' });
     setIsContextMenuVisible(true);
   }, []);
 
@@ -231,8 +276,9 @@ export default function FlowComponent() {
   }, [workflowId, nodes, edges]);
 
   // Actualizar nodo desde menú contextual
-  const updateNodeData = useCallback(() => {
+  const updateNodeData = useCallback(async () => {
     if (selectedNode) {
+      const userIP = await getUserIP();
       setNodes((nds) =>
         nds.map((n) =>
           n.id === selectedNode.id
@@ -243,6 +289,7 @@ export default function FlowComponent() {
                   name: editingNodeData.name,
                   time: editingNodeData.time,
                   inCharge: editingNodeData.inCharge,
+                  ip: userIP, // Actualizar con la IP del usuario que modifica
                   onChangeLabel: handleChangeLabel
                 }
               }
@@ -251,7 +298,7 @@ export default function FlowComponent() {
       );
       closeContextMenu();
     }
-  }, [selectedNode, editingNodeData, setNodes, handleChangeLabel, closeContextMenu]);
+  }, [selectedNode, editingNodeData, setNodes, handleChangeLabel, closeContextMenu, getUserIP]);
 
   // Listeners para cerrar y drag del contexto
   useEffect(() => {
@@ -283,50 +330,64 @@ export default function FlowComponent() {
   }, []);
 
   // -------------------------
+  // Toolbar handlers: zoom, fit, save, export
+  // -------------------------
+  const handleZoomIn = useCallback(() => {
+    if (reactFlowInstance.current?.zoomIn) {
+      reactFlowInstance.current.zoomIn({ duration: 200 });
+    }
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    if (reactFlowInstance.current?.zoomOut) {
+      reactFlowInstance.current.zoomOut({ duration: 200 });
+    }
+  }, []);
+
+  const handleFitView = useCallback(() => {
+    if (reactFlowInstance.current?.fitView) {
+      reactFlowInstance.current.fitView({ padding: 0.2, duration: 200 });
+    }
+  }, []);
+
+  const handleExport = useCallback(() => {
+    try {
+      const instanceNodes = reactFlowInstance?.current?.getNodes?.() ?? nodes;
+
+      const nodesForExport = instanceNodes.map((n) => {
+        const safeData = { ...n.data };
+        if (safeData.onChangeLabel) delete safeData.onChangeLabel;
+        return { id: n.id, type: n.type, position: n.position, data: safeData };
+      });
+
+      const edgesForExport = edges.map((e) => {
+        const { id, source, target, label, type, animated, style } = e;
+        return { id, source, target, label, type, animated, style };
+      });
+
+      const payload = { nodes: nodesForExport, edges: edgesForExport, exportedAt: new Date().toISOString() };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `workflow_${workflowId || 'sin_id'}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setFeedback('Workflow exportado.');
+      setTimeout(() => setFeedback(''), 2200);
+    } catch (err) {
+      console.error('Error exportando workflow:', err);
+      setFeedback('Error al exportar el workflow.');
+    }
+  }, [nodes, edges, workflowId]);
+
+  // -------------------------
   // Render
   // -------------------------
+
   return (
     <div className="flow-container" style={{ display: 'flex', gap: 8 }}>
-      <aside className="flow-panel" style={{ width: 320, padding: 12, boxSizing: 'border-box', borderRight: '1px solid #eee', background: '#fff' }}>
-        <div className="flow-panel-header" onClick={() => setIsMenuExpanded(!isMenuExpanded)}>
-          <h3 className="flow-panel-title">Crear nodo</h3>
-          <span className={`flow-arrow ${isMenuExpanded ? 'expanded' : ''}`}>▼</span>
-        </div>
-
-        <div className={`flow-form-container ${isMenuExpanded ? 'expanded' : ''}`}>
-          <label className="flow-form-label">
-            Nombre:
-            <input value={newLabel} onChange={(e) => setNewLabel(e.target.value)} className="flow-form-input" placeholder="Ingresa el nombre del nodo" />
-          </label>
-
-          <label className="flow-form-label">
-            Duración:
-            <input value={newTime} onChange={(e) => setNewTime(e.target.value)} className="flow-form-input" placeholder="Ingresa la duración de la tarea" />
-          </label>
-
-          <label className="flow-form-label">
-            A cargo:
-            <input value={newInCharge} onChange={(e) => setNewInCharge(e.target.value)} className="flow-form-input" placeholder="Ingresa la persona encargada" />
-          </label>
-
-          <label className="flow-form-label">
-            Tipo:
-            <select value={newType} onChange={(e) => setNewType(e.target.value)} className="flow-form-select">
-              <option value="custom">Custom</option>
-              <option value="default">Default</option>
-            </select>
-          </label>
-
-          <button onClick={createNodeCentered} className="flow-create-button">Crear nodo (centro)</button>
-
-          <div className="flow-instructions">Usa el botón de arriba para crear nodos en el centro del canvas.</div>
-
-          <div style={{ marginTop: 12 }}>
-            <button onClick={saveWorkflowToStorage} className="btn-primary">Guardar workflow</button>
-            {feedback && <div style={{ marginTop: 8 }} className="feedback">{feedback}</div>}
-          </div>
-        </div>
-
+      <FlowSidebar onAddNode={handleAddNode} onResetFlow={handleResetFlow}>
         <hr className="flow-separator" />
         <h4 className="flow-tips-title">Tips</h4>
         <ul className="flow-tips-list">
@@ -334,19 +395,43 @@ export default function FlowComponent() {
           <li>Conecta nodos arrastrando desde un handle a otro</li>
           <li>Selecciona una arista para editar su etiqueta o eliminarla</li>
         </ul>
-
         {selectedEdge ? (
           <div className="edge-editor-region">
             <h4>Editar arista</h4>
-            <EdgeEditorPanel edge={selectedEdge} onSave={(newLabel) => saveEdgeLabel(selectedEdge.id, newLabel)} onDelete={() => deleteEdge(selectedEdge.id)} onClose={() => setSelectedEdgeId(null)} />
+            <EdgeEditorPanel 
+              edge={selectedEdge} 
+              onSave={(newLabel) => saveEdgeLabel(selectedEdge.id, newLabel)} 
+              onDelete={() => deleteEdge(selectedEdge.id)} 
+              onClose={() => setSelectedEdgeId(null)} 
+            />
           </div>
         ) : (
           <div className="edge-editor-placeholder">Selecciona una arista en el canvas para editarla</div>
         )}
-      </aside>
+      </FlowSidebar>
 
-      <div ref={reactFlowWrapper} className="flow-canvas-container" style={{ flex: 1, position: 'relative', height: '720px' }}>
-        <ReactFlow
+      {/* Reemplazado ReactFlow por FlowCanvas aquí para no repetir lógica ya modularizada */}
+      <div ref={reactFlowWrapper} className="flow-canvas-container" style={{ flex: 1, position: 'relative' }}>
+        <FlowToolbar
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
+          onFitView={handleFitView}
+          onSave={saveWorkflowToStorage}
+          onExport={handleExport}
+          extraActions={() => (
+            <button
+              type="button"
+              className="toolbar-btn"
+              title="Añadir nodo centrado"
+              onClick={() => createNodeCentered('Nuevo nodo', '', '', 'custom')}
+            >
+              (+) Nodo centrado
+            </button>
+          )}
+          style={{ position: 'absolute', top: 8, left: 8, zIndex: 5, background: 'transparent', padding: 0 }}
+        />
+        {feedback && <div style={{ marginTop: 8 }} className="feedback">{feedback}</div>}
+        <FlowCanvas
           nodes={nodes}
           edges={edges}
           onNodesChange={onNodesChange}
@@ -356,14 +441,8 @@ export default function FlowComponent() {
           onNodeClick={onNodeClick}
           nodeTypes={nodeTypes}
           onEdgeClick={onEdgeClick}
-          fitView
           onInit={onInit}
-          style={{ width: '100%', height: '100%' }}
-        >
-          <MiniMap nodeColor="rgb(179, 64, 64)" />
-          <Controls />
-          <Background gap={16} />
-        </ReactFlow>
+        />
 
         {isContextMenuVisible && (
           <div className="node-context-menu" style={{ position: 'absolute', left: contextMenuPosition.x + 10, top: contextMenuPosition.y - 10, zIndex: 1000 }}>
@@ -387,6 +466,14 @@ export default function FlowComponent() {
                 Encargado:
                 <input type="text" value={editingNodeData.inCharge} onChange={(e) => setEditingNodeData(prev => ({ ...prev, inCharge: e.target.value }))} className="context-menu-input" placeholder="Nombre del responsable" />
               </label>
+            </div>
+
+            {/* Información de solo lectura - IP */}
+            <div className="context-menu-readonly">
+              <div className="context-menu-label">
+                Último modificador:
+                <div className="context-menu-ip-display">{editingNodeData.ip || 'Sin IP'}</div>
+              </div>
             </div>
 
             <div className="context-menu-actions">
