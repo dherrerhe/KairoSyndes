@@ -31,6 +31,70 @@ body {
   font-family: 'Roboto', sans-serif;
 }
 
+/* Asegurar que el árbol base ocupa toda la altura */
+html, body, #root {
+  height: 100%;
+}
+
+/* ==========================================================================
+   TOOLBAR FLOTANTE SOBRE EL CANVAS
+   ========================================================================== */
+
+/**
+ * Contenedor de la toolbar que flota sobre el canvas.
+ * Usa efecto glass (fondo translúcido con blur) y sombra suave.
+ */
+.flow-toolbar {
+  position: absolute; /* reforzado por inline en el componente */
+  top: 8px;
+  left: 8px;
+  z-index: 5;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 6px;
+  background: rgba(255, 255, 255, 0.7);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+/**
+ * Botones de la toolbar.
+ * Estilo moderno con hover/active y soporte para iconos.
+ */
+.toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  background: linear-gradient(180deg, #ffffffcc, #f3f4f6cc);
+  color: #111827;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background .2s ease, box-shadow .2s ease, transform .1s ease;
+}
+
+.toolbar-btn:hover {
+  background: linear-gradient(180deg, #ffffff, #eef2f7);
+  box-shadow: 0 6px 16px rgba(2, 6, 23, 0.12);
+}
+
+.toolbar-btn:active {
+  transform: translateY(1px);
+  box-shadow: 0 3px 10px rgba(2, 6, 23, 0.16) inset;
+}
+
+.toolbar-btn svg {
+  font-size: 16px;
+}
+
+
 /* ==========================================================================
    HEADER PRINCIPAL
    ========================================================================== */
@@ -38,15 +102,21 @@ body {
 /**
  * Header principal de la aplicación.
  * Contiene el menú hamburguesa y establece el estilo del encabezado.
+ * Siempre visible en la parte superior de la pantalla.
  */
 .App-header {
   padding: 10px 20px;
   background: rgb(35, 33, 83);
   height: 50px;
-  width: auto;
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: flex-start;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1001;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* ==========================================================================
@@ -262,7 +332,8 @@ body {
  */
 .flow-container {
   display: flex;
-  height: 610px;
+  height: calc(100dvh - 70px); /* altura total del viewport dinámico menos header */
+  min-height: calc(100dvh - 70px);
   gap: 8px;
 }
 
@@ -542,6 +613,33 @@ body {
 }
 
 /**
+ * Sección de solo lectura del menú contextual.
+ * Para mostrar información que no se puede editar.
+ */
+.context-menu-readonly {
+  padding: 12px 16px;
+  border-top: 1px solid #eee;
+  background: #f8f9fa;
+}
+
+/**
+ * Display de IP en el menú contextual.
+ * Estilo para mostrar la IP del último modificador como información de solo lectura.
+ */
+.context-menu-ip-display {
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  color: #4CAF50;
+  font-weight: 600;
+  background: rgba(76, 175, 80, 0.1);
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(76, 175, 80, 0.2);
+  margin-top: 4px;
+  display: inline-block;
+}
+
+/**
  * Acciones del menú contextual.
  * Contiene los botones Guardar y Cancelar.
  */
@@ -598,15 +696,6 @@ body {
    ESTILOS DE REACT FLOW
    ========================================================================== */
 
-/**
- * Contenedor principal del diagrama de flujo.
- * Establece el layout flexbox para el panel lateral y el canvas.
- */
-.flow-container {
-  display: flex;
-  height: 100vh;
-  width: 100%;
-}
 
 /**
  * Panel lateral del diagrama de flujo.
@@ -628,6 +717,7 @@ body {
   flex: 1;
   position: relative;
   background: #fafafa;
+  height: 100%;
 }
 
 /**
@@ -815,6 +905,7 @@ body {
   background-color: #f8f9fa;
   border-radius: 4px;
   overflow: hidden;
+  height: 100%;
 }
 
 /**
@@ -825,6 +916,19 @@ body {
   width: 100%;
   height: 100%;
   
+}
+
+/* ==========================================================================
+   CONTENEDOR PRINCIPAL
+   ========================================================================== */
+
+/**
+ * Contenedor principal de la aplicación.
+ * Ajusta el margen superior para evitar solapamiento con el header fijo.
+ */
+.main {
+  margin-top: 70px; /* Altura del header fijo + padding */
+  min-height: calc(100vh - 70px);
 }
 
 /* ==========================================================================

@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import ReactFlow, { MiniMap, Controls, Background } from 'reactflow';
+import ReactFlow, { MiniMap, Background } from 'reactflow';
 
 /**
  * FlowCanvas
@@ -79,7 +79,6 @@ export default function FlowCanvas({
           zoomable
           style={{ height: 90, right: 4, bottom: 4 }}
         />
-      <Controls />
       <Background gap={16} />
       {/* Renderiza elementos hijos extra (por ejemplo, overlays, tooltips, etc) */}
       {children}

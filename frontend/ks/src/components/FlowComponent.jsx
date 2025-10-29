@@ -70,20 +70,33 @@ export default function FlowComponent() {
   const [selectedNode, setSelectedNode] = useState(null);
   const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
   const [isContextMenuVisible, setIsContextMenuVisible] = useState(false);
-  const [editingNodeData, setEditingNodeData] = useState({ name: '', time: '', inCharge: '' });
+  const [editingNodeData, setEditingNodeData] = useState({ name: '', time: '', inCharge: '', ip: '' });
+
+// Función para obtener la IP real del usuario
+const getUserIP = useCallback(async () => {
+  try {
+    const response = await fetch('https://api.ipify.org?format=json');
+    const data = await response.json();
+    return data.ip;
+  } catch (error) {
+    console.warn('No se pudo obtener la IP del usuario:', error);
+    return 'IP no disponible';
+  }
+}, []);
 
 // --- Handler para agregar un nodo desde el sidebar
-const handleAddNode = useCallback(({ name, time, inCharge }) => {
+const handleAddNode = useCallback(async ({ name, time, inCharge }) => {
+  const userIP = await getUserIP();
   setNodes((existingNodes) => [
     ...existingNodes,
     {
       id: getId(),
       type: 'custom',
       position: { x: 120 + Math.random() * 200, y: 120 + Math.random() * 80 },
-      data: { name, time, inCharge }
+      data: { name, time, inCharge, ip: userIP }
     }
   ]);
-}, [setNodes]);
+}, [setNodes, getUserIP]);
 
 // --- Handler para resetear flujo
 const handleResetFlow = useCallback(() => {
@@ -138,7 +151,8 @@ const handleResetFlow = useCallback(() => {
 
   // Si quieres solo mostrar el esqueleto correcto:
   const createNodeCentered = useCallback(
-    (label, time = '', inCharge = '', type = 'custom') => {
+    async (label, time = '', inCharge = '', type = 'custom') => {
+      const userIP = await getUserIP();
       const bounds = reactFlowWrapper.current?.getBoundingClientRect();
       let position = { x: 250, y: 150 };
 
@@ -156,13 +170,13 @@ const handleResetFlow = useCallback(() => {
         position,
         data:
           type === 'custom'
-            ? { name: label, time, inCharge, onChangeLabel: handleChangeLabel }
+            ? { name: label, time, inCharge, ip: userIP, onChangeLabel: handleChangeLabel }
             : { label }
       };
 
       setNodes((nds) => nds.concat(newNode));
     },
-    [handleChangeLabel, setNodes]
+    [handleChangeLabel, setNodes, getUserIP]
   );
 
 
@@ -173,7 +187,7 @@ const handleResetFlow = useCallback(() => {
       setContextMenuPosition({ x: event.clientX - rect.left, y: event.clientY - rect.top });
     }
     setSelectedNode(node);
-    setEditingNodeData({ name: node.data.name || '', time: node.data.time || '', inCharge: node.data.inCharge || '' });
+    setEditingNodeData({ name: node.data.name || '', time: node.data.time || '', inCharge: node.data.inCharge || '', ip: node.data.ip || '' });
     setIsContextMenuVisible(true);
   }, []);
 
@@ -262,8 +276,9 @@ const handleResetFlow = useCallback(() => {
   }, [workflowId, nodes, edges]);
 
   // Actualizar nodo desde menú contextual
-  const updateNodeData = useCallback(() => {
+  const updateNodeData = useCallback(async () => {
     if (selectedNode) {
+      const userIP = await getUserIP();
       setNodes((nds) =>
         nds.map((n) =>
           n.id === selectedNode.id
@@ -274,6 +289,7 @@ const handleResetFlow = useCallback(() => {
                   name: editingNodeData.name,
                   time: editingNodeData.time,
                   inCharge: editingNodeData.inCharge,
+                  ip: userIP, // Actualizar con la IP del usuario que modifica
                   onChangeLabel: handleChangeLabel
                 }
               }
@@ -282,7 +298,7 @@ const handleResetFlow = useCallback(() => {
       );
       closeContextMenu();
     }
-  }, [selectedNode, editingNodeData, setNodes, handleChangeLabel, closeContextMenu]);
+  }, [selectedNode, editingNodeData, setNodes, handleChangeLabel, closeContextMenu, getUserIP]);
 
   // Listeners para cerrar y drag del contexto
   useEffect(() => {
@@ -412,7 +428,7 @@ const handleResetFlow = useCallback(() => {
               (+) Nodo centrado
             </button>
           )}
-          style={{ position: 'sticky', top: 0, zIndex: 2, background: '#fff' }}
+          style={{ position: 'absolute', top: 8, left: 8, zIndex: 5, background: 'transparent', padding: 0 }}
         />
         {feedback && <div style={{ marginTop: 8 }} className="feedback">{feedback}</div>}
         <FlowCanvas
@@ -450,6 +466,14 @@ const handleResetFlow = useCallback(() => {
                 Encargado:
                 <input type="text" value={editingNodeData.inCharge} onChange={(e) => setEditingNodeData(prev => ({ ...prev, inCharge: e.target.value }))} className="context-menu-input" placeholder="Nombre del responsable" />
               </label>
+            </div>
+
+            {/* Información de solo lectura - IP */}
+            <div className="context-menu-readonly">
+              <div className="context-menu-label">
+                Último modificador:
+                <div className="context-menu-ip-display">{editingNodeData.ip || 'Sin IP'}</div>
+              </div>
             </div>
 
             <div className="context-menu-actions">

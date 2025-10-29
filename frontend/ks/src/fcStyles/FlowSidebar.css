@@ -3,6 +3,9 @@
   border-right: 1px solid #ccc;
   width: 260px;
   background: #fafbfc;
+  height: 100%;
+  box-sizing: border-box;
+  overflow-y: auto;
 }
 
 .fs-form {

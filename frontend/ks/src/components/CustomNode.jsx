@@ -33,7 +33,7 @@ import { Handle } from 'reactflow';
  */
 export default function CustomNode({ id, data }) {
   // Extraer propiedades del objeto data con valores por defecto
-  const { name = '', time = '', inCharge = '', onChangeLabel } = data || {};
+  const { name = '', time = '', inCharge = '', ip = '', onChangeLabel } = data || {};
 
   return (
     <div className="custom-node">
@@ -46,7 +46,6 @@ export default function CustomNode({ id, data }) {
       </div>
 
       {/* Información del nodo */}
-      {/*
       <div className="custom-node-info">
         {time && (
           <div className="custom-node-field">
@@ -60,8 +59,13 @@ export default function CustomNode({ id, data }) {
             <span className="custom-node-value">{inCharge}</span>
           </div>
         )}
+        {ip && (
+          <div className="custom-node-field">
+            <span className="custom-node-label">IP:</span>
+            <span className="custom-node-value">{ip}</span>
+          </div>
+        )}
       </div>
-      */}
 
       {/* Handle inferior (salida) */}
       <Handle type="source" position="bottom" id="a" className="custom-node-handle" />
