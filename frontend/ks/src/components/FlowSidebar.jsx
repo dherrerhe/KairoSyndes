@@ -9,6 +9,7 @@ export default function FlowSidebar({ onAddNode, onResetFlow, children }) {
   const [name, setName] = useState('');
   const [time, setTime] = useState('');
   const [inCharge, setInCharge] = useState('');
+  const [nodeType, setNodeType] = useState('custom'); // 'custom' | 'normal'
 
   // Handler para el formulario de agregar nodo
   const handleAddNode = (e) => {
@@ -20,12 +21,14 @@ export default function FlowSidebar({ onAddNode, onResetFlow, children }) {
         name: name.trim(),
         time: time.trim(),
         inCharge: inCharge.trim(),
+        type: nodeType,
       });
     }
     // Limpia los inputs después de agregar
     setName('');
     setTime('');
     setInCharge('');
+    setNodeType('custom');
   };
 
   return (
@@ -44,6 +47,19 @@ export default function FlowSidebar({ onAddNode, onResetFlow, children }) {
               placeholder="Nombre del nodo"
               className="fs-input"
             />
+          </label>
+        </div>
+        <div>
+          <label>
+            Tipo de nodo<br />
+            <select
+              className="fs-input"
+              value={nodeType}
+              onChange={(e) => setNodeType(e.target.value)}
+            >
+              <option value="custom">Personalizado (Tipo 1)</option>
+              <option value="normal">Normal (Tipo 2)</option>
+            </select>
           </label>
         </div>
         <div>

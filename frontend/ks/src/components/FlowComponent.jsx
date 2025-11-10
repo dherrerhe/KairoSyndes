@@ -85,17 +85,26 @@ const getUserIP = useCallback(async () => {
 }, []);
 
 // --- Handler para agregar un nodo desde el sidebar
-const handleAddNode = useCallback(async ({ name, time, inCharge }) => {
+const handleAddNode = useCallback(async ({ name, time, inCharge, type = 'custom' }) => {
   const userIP = await getUserIP();
-  setNodes((existingNodes) => [
-    ...existingNodes,
-    {
-      id: getId(),
-      type: 'custom',
-      position: { x: 120 + Math.random() * 200, y: 120 + Math.random() * 80 },
-      data: { name, time, inCharge, ip: userIP }
-    }
-  ]);
+  const position = { x: 120 + Math.random() * 200, y: 120 + Math.random() * 80 };
+
+  const nodeToAdd =
+    type === 'custom'
+      ? {
+          id: getId(),
+          type: 'custom',
+          position,
+          data: { name, time, inCharge, ip: userIP }
+        }
+      : {
+          id: getId(),
+          // sin `type` => nodo normal por defecto en React Flow
+          position,
+          data: { label: name }
+        };
+
+  setNodes((existingNodes) => [...existingNodes, nodeToAdd]);
 }, [setNodes, getUserIP]);
 
 // --- Handler para resetear flujo
