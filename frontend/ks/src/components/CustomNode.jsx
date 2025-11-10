@@ -13,6 +13,9 @@ import React from 'react';
 // Importación de Handle de ReactFlow para puntos de conexión
 import { Handle } from 'reactflow';
 
+// Importación de estilos
+import '../fcStyles/CustomNode.css';
+
 /**
  * Componente de nodo personalizado para ReactFlow.
  * 
@@ -33,7 +36,15 @@ import { Handle } from 'reactflow';
  */
 export default function CustomNode({ id, data }) {
   // Extraer propiedades del objeto data con valores por defecto
-  const { name = '', time = '', inCharge = '', ip = '', onChangeLabel } = data || {};
+  const { name = '', time = '', inCharge = '', ip = '', progress = 0, onChangeLabel } = data || {};
+  
+  // Asegurar que progress esté entre 0 y 100
+  const progressValue = Math.max(0, Math.min(100, Number(progress) || 0));
+  
+  // Calcular el offset del círculo SVG (circunferencia = 2 * π * r)
+  const radius = 20;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (progressValue / 100) * circumference;
 
   return (
     <div className="custom-node">
@@ -43,6 +54,37 @@ export default function CustomNode({ id, data }) {
       {/* Nombre del nodo */}
       <div className="custom-node-name">
         {name || 'Sin nombre'}
+      </div>
+
+      {/* Barra de progreso circular */}
+      <div className="custom-node-progress-container">
+        <svg className="custom-node-progress-svg" width="50" height="50">
+          {/* Círculo de fondo */}
+          <circle
+            className="custom-node-progress-bg"
+            cx="25"
+            cy="25"
+            r={radius}
+            fill="none"
+            stroke="#e0e0e0"
+            strokeWidth="4"
+          />
+          {/* Círculo de progreso */}
+          <circle
+            className="custom-node-progress-bar"
+            cx="25"
+            cy="25"
+            r={radius}
+            fill="none"
+            stroke="#4CAF50"
+            strokeWidth="4"
+            strokeDasharray={circumference}
+            strokeDashoffset={offset}
+            strokeLinecap="round"
+            transform="rotate(-90 25 25)"
+          />
+        </svg>
+        <div className="custom-node-progress-text">{Math.round(progressValue)}%</div>
       </div>
 
       {/* Información del nodo */}

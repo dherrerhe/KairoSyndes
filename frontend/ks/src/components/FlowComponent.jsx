@@ -17,8 +17,8 @@ import { getId, saveWorkflowToLocalStorage, loadWorkflowFromLocalStorage, limpia
 const nodeTypes = { custom: CustomNode };
 
 const initialNodes = [
-  { id: '1', type: 'custom', position: { x: 250, y: 5 }, data: { name: 'Nodo A', time: '2h', inCharge: 'Usuario 1' } },
-  { id: '2', type: 'custom', position: { x: 100, y: 150 }, data: { name: 'Nodo B', time: '1.5h', inCharge: 'Usuario 2' } },
+  { id: '1', type: 'custom', position: { x: 250, y: 5 }, data: { name: 'Nodo A', time: '2h', inCharge: 'Usuario 1', progress: 0 } },
+  { id: '2', type: 'custom', position: { x: 100, y: 150 }, data: { name: 'Nodo B', time: '1.5h', inCharge: 'Usuario 2', progress: 0 } },
   { id: '3', position: { x: 400, y: 150 }, data: { label: 'Nodo C (normal)' } }
 ];
 
@@ -70,7 +70,7 @@ export default function FlowComponent() {
   const [selectedNode, setSelectedNode] = useState(null);
   const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
   const [isContextMenuVisible, setIsContextMenuVisible] = useState(false);
-  const [editingNodeData, setEditingNodeData] = useState({ name: '', time: '', inCharge: '', ip: '' });
+  const [editingNodeData, setEditingNodeData] = useState({ name: '', time: '', inCharge: '', ip: '', progress: 0 });
 
 // Función para obtener la IP real del usuario
 const getUserIP = useCallback(async () => {
@@ -95,7 +95,7 @@ const handleAddNode = useCallback(async ({ name, time, inCharge, type = 'custom'
           id: getId(),
           type: 'custom',
           position,
-          data: { name, time, inCharge, ip: userIP }
+          data: { name, time, inCharge, ip: userIP, progress: 0 }
         }
       : {
           id: getId(),
@@ -179,7 +179,7 @@ const handleResetFlow = useCallback(() => {
         position,
         data:
           type === 'custom'
-            ? { name: label, time, inCharge, ip: userIP, onChangeLabel: handleChangeLabel }
+            ? { name: label, time, inCharge, ip: userIP, progress: 0, onChangeLabel: handleChangeLabel }
             : { label }
       };
 
@@ -196,7 +196,13 @@ const handleResetFlow = useCallback(() => {
       setContextMenuPosition({ x: event.clientX - rect.left, y: event.clientY - rect.top });
     }
     setSelectedNode(node);
-    setEditingNodeData({ name: node.data.name || '', time: node.data.time || '', inCharge: node.data.inCharge || '', ip: node.data.ip || '' });
+    setEditingNodeData({ 
+      name: node.data.name || '', 
+      time: node.data.time || '', 
+      inCharge: node.data.inCharge || '', 
+      ip: node.data.ip || '',
+      progress: node.data.progress !== undefined ? node.data.progress : 0
+    });
     setIsContextMenuVisible(true);
   }, []);
 
@@ -298,6 +304,7 @@ const handleResetFlow = useCallback(() => {
                   name: editingNodeData.name,
                   time: editingNodeData.time,
                   inCharge: editingNodeData.inCharge,
+                  progress: editingNodeData.progress !== undefined ? Math.max(0, Math.min(100, Number(editingNodeData.progress) || 0)) : 0,
                   ip: userIP, // Actualizar con la IP del usuario que modifica
                   onChangeLabel: handleChangeLabel
                 }
@@ -396,7 +403,7 @@ const handleResetFlow = useCallback(() => {
 
   return (
     <div className="flow-container" style={{ display: 'flex', gap: 8 }}>
-      <FlowSidebar onAddNode={handleAddNode} onResetFlow={handleResetFlow}>
+      <FlowSidebar onAddNode={handleAddNode} onResetFlow={handleResetFlow} nodes={nodes}>
         <hr className="flow-separator" />
         <h4 className="flow-tips-title">Tips</h4>
         <ul className="flow-tips-list">
@@ -474,6 +481,19 @@ const handleResetFlow = useCallback(() => {
               <label className="context-menu-label">
                 Encargado:
                 <input type="text" value={editingNodeData.inCharge} onChange={(e) => setEditingNodeData(prev => ({ ...prev, inCharge: e.target.value }))} className="context-menu-input" placeholder="Nombre del responsable" />
+              </label>
+
+              <label className="context-menu-label">
+                Progreso (%):
+                <input 
+                  type="number" 
+                  min="0" 
+                  max="100" 
+                  value={editingNodeData.progress !== undefined ? editingNodeData.progress : 0} 
+                  onChange={(e) => setEditingNodeData(prev => ({ ...prev, progress: e.target.value }))} 
+                  className="context-menu-input" 
+                  placeholder="0-100" 
+                />
               </label>
             </div>
 

@@ -43,3 +43,37 @@
   border-radius: 50%;
 }
 
+/* Contenedor de la barra de progreso */
+.custom-node-progress-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 8px 0;
+  position: relative;
+}
+
+/* SVG de la barra de progreso */
+.custom-node-progress-svg {
+  display: block;
+}
+
+/* Círculo de fondo de la barra de progreso */
+.custom-node-progress-bg {
+  transition: stroke 0.3s ease;
+}
+
+/* Círculo de la barra de progreso */
+.custom-node-progress-bar {
+  transition: stroke-dashoffset 0.5s ease;
+}
+
+/* Texto del porcentaje */
+.custom-node-progress-text {
+  position: absolute;
+  font-size: 11px;
+  font-weight: 600;
+  color: #4CAF50;
+  text-align: center;
+  pointer-events: none;
+}
+
