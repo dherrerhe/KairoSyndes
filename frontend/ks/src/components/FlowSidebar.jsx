@@ -1,16 +1,26 @@
 // Este componente es el sidebar para crear nodos y mostrar controles básicos.
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import '../fcStyles/FlowSidebar.css';
 
 
 // Sidebar para crear nodos y otros controles laterales del flujo
-export default function FlowSidebar({ onAddNode, onResetFlow, children, nodes = [] }) {
+export default function FlowSidebar({ onAddNode, onResetFlow, children, nodes = [], commentNode = null, onAddComment, onCloseComments }) {
   // Estados locales para los inputs del formulario (nombre, tiempo, responsable)
   const [name, setName] = useState('');
   const [time, setTime] = useState('');
   const [inCharge, setInCharge] = useState('');
   const [nodeType, setNodeType] = useState('custom'); // 'custom' | 'normal'
   const [isProgressExpanded, setIsProgressExpanded] = useState(true); // Estado para el acordeón
+  const [newComment, setNewComment] = useState('');
+
+  const comments = useMemo(
+    () => (Array.isArray(commentNode?.data?.comments) ? commentNode.data.comments : []),
+    [commentNode]
+  );
+
+  useEffect(() => {
+    setNewComment('');
+  }, [commentNode?.id]);
 
   // Calcular el progreso total del proyecto
   const projectProgress = useMemo(() => {
@@ -163,6 +173,64 @@ export default function FlowSidebar({ onAddNode, onResetFlow, children, nodes = 
         >
           Resetear flujo
         </button>
+      )}
+
+      {commentNode && (
+        <div className="fs-comments-section">
+          <div className="fs-comments-header">
+            <h4 className="fs-comments-title">Comentarios — {commentNode.data?.name || commentNode.id}</h4>
+            <button
+              type="button"
+              className="fs-comments-close"
+              onClick={() => {
+                if (onCloseComments) onCloseComments();
+              }}
+            >
+              ×
+            </button>
+          </div>
+
+          <div className="fs-comments-list">
+            {comments.length === 0 ? (
+              <p className="fs-comments-empty">No hay comentarios aún.</p>
+            ) : (
+              comments.map((comment) => (
+                <div key={comment.id} className="fs-comment-item">
+                  <div className="fs-comment-text">{comment.text}</div>
+                  {comment.createdAt && (
+                    <div className="fs-comment-meta">
+                      {new Date(comment.createdAt).toLocaleString()}
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+
+          <form
+            className="fs-comments-form"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const text = newComment.trim();
+              if (!text || !commentNode) return;
+              if (onAddComment) {
+                onAddComment(commentNode.id, text);
+                setNewComment('');
+              }
+            }}
+          >
+            <textarea
+              className="fs-comments-textarea"
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              placeholder="Escribe un comentario..."
+              rows={3}
+            />
+            <button type="submit" className="fs-comments-submit" disabled={!newComment.trim()}>
+              Agregar comentario
+            </button>
+          </form>
+        </div>
       )}
 
       {/* Aquí puedes agregar más controles o children (por ejemplo, plantillas, importar/exportar, etc) */}

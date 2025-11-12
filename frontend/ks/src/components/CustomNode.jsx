@@ -36,7 +36,7 @@ import '../fcStyles/CustomNode.css';
  */
 export default function CustomNode({ id, data }) {
   // Extraer propiedades del objeto data con valores por defecto
-  const { name = '', time = '', inCharge = '', ip = '', progress = 0, onChangeLabel } = data || {};
+  const { name = '', time = '', inCharge = '', ip = '', progress = 0, onShowComments } = data || {};
   
   // Asegurar que progress esté entre 0 y 100
   const progressValue = Math.max(0, Math.min(100, Number(progress) || 0));
@@ -48,6 +48,19 @@ export default function CustomNode({ id, data }) {
 
   return (
     <div className="custom-node">
+      <button
+        type="button"
+        className="custom-node-comment-btn"
+        title="Ver comentarios"
+        onClick={(event) => {
+          event.stopPropagation();
+          if (onShowComments) {
+            onShowComments(id);
+          }
+        }}
+      >
+        💬
+      </button>
       {/* Handle superior (entrada) */}
       <Handle type="target" position="top" className="custom-node-handle" />
 

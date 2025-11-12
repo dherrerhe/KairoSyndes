@@ -147,3 +147,133 @@
   margin-top: 8px;
 }
 
+/* Sección de comentarios */
+.fs-comments-section {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: #fff;
+  padding: 16px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.fs-comments-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  gap: 8px;
+}
+
+.fs-comments-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+.fs-comments-close {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: #f0f0f0;
+  color: #555;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.fs-comments-close:hover {
+  background: #e0e0e0;
+  transform: translateY(-1px);
+}
+
+.fs-comments-list {
+  max-height: 180px;
+  overflow-y: auto;
+  margin-bottom: 12px;
+  padding-right: 4px;
+}
+
+.fs-comments-empty {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: #777;
+  font-style: italic;
+}
+
+.fs-comment-item {
+  background: #f8f9fa;
+  border-radius: 6px;
+  padding: 10px;
+  margin-bottom: 8px;
+  border: 1px solid #e6e6e6;
+}
+
+.fs-comment-text {
+  font-size: 13px;
+  color: #333;
+  margin-bottom: 6px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.fs-comment-meta {
+  font-size: 11px;
+  color: #888;
+  text-align: right;
+}
+
+.fs-comments-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fs-comments-textarea {
+  resize: vertical;
+  min-height: 60px;
+  max-height: 140px;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.fs-comments-textarea:focus {
+  outline: none;
+  border-color: #4CAF50;
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+}
+
+.fs-comments-submit {
+  align-self: flex-end;
+  background: #4CAF50;
+  color: #fff;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.fs-comments-submit:disabled {
+  background: #b7dbc0;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.fs-comments-submit:not(:disabled):hover {
+  background: #45a049;
+  transform: translateY(-1px);
+}
+

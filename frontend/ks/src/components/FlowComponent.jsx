@@ -3,7 +3,7 @@
  */
 // 
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ReactFlowProvider, addEdge, useNodesState, useEdgesState } from 'reactflow';
 import 'reactflow/dist/style.css';
 import FlowSidebar from './FlowSidebar';
@@ -17,8 +17,18 @@ import { getId, saveWorkflowToLocalStorage, loadWorkflowFromLocalStorage, limpia
 const nodeTypes = { custom: CustomNode };
 
 const initialNodes = [
-  { id: '1', type: 'custom', position: { x: 250, y: 5 }, data: { name: 'Nodo A', time: '2h', inCharge: 'Usuario 1', progress: 0 } },
-  { id: '2', type: 'custom', position: { x: 100, y: 150 }, data: { name: 'Nodo B', time: '1.5h', inCharge: 'Usuario 2', progress: 0 } },
+  {
+    id: '1',
+    type: 'custom',
+    position: { x: 250, y: 5 },
+    data: { name: 'Nodo A', time: '2h', inCharge: 'Usuario 1', progress: 0, comments: [] }
+  },
+  {
+    id: '2',
+    type: 'custom',
+    position: { x: 100, y: 150 },
+    data: { name: 'Nodo B', time: '1.5h', inCharge: 'Usuario 2', progress: 0, comments: [] }
+  },
   { id: '3', position: { x: 400, y: 150 }, data: { label: 'Nodo C (normal)' } }
 ];
 
@@ -72,48 +82,38 @@ export default function FlowComponent() {
   const [isContextMenuVisible, setIsContextMenuVisible] = useState(false);
   const [editingNodeData, setEditingNodeData] = useState({ name: '', time: '', inCharge: '', ip: '', progress: 0 });
 
-// Función para obtener la IP real del usuario
-const getUserIP = useCallback(async () => {
-  try {
-    const response = await fetch('https://api.ipify.org?format=json');
-    const data = await response.json();
-    return data.ip;
-  } catch (error) {
-    console.warn('No se pudo obtener la IP del usuario:', error);
-    return 'IP no disponible';
-  }
-}, []);
+  // Comentarios
+  const [commentNodeId, setCommentNodeId] = useState(null);
+  const commentNode = useMemo(
+    () => (commentNodeId ? nodes.find((node) => node.id === commentNodeId) ?? null : null),
+    [commentNodeId, nodes]
+  );
 
-// --- Handler para agregar un nodo desde el sidebar
-const handleAddNode = useCallback(async ({ name, time, inCharge, type = 'custom' }) => {
-  const userIP = await getUserIP();
-  const position = { x: 120 + Math.random() * 200, y: 120 + Math.random() * 80 };
+  // Función para obtener la IP real del usuario
+  const getUserIP = useCallback(async () => {
+    try {
+      const response = await fetch('https://api.ipify.org?format=json');
+      const data = await response.json();
+      return data.ip;
+    } catch (error) {
+      console.warn('No se pudo obtener la IP del usuario:', error);
+      return 'IP no disponible';
+    }
+  }, []);
 
-  const nodeToAdd =
-    type === 'custom'
-      ? {
-          id: getId(),
-          type: 'custom',
-          position,
-          data: { name, time, inCharge, ip: userIP, progress: 0 }
-        }
-      : {
-          id: getId(),
-          // sin `type` => nodo normal por defecto en React Flow
-          position,
-          data: { label: name }
-        };
+  useEffect(() => {
+    if (commentNodeId && !nodes.some((node) => node.id === commentNodeId)) {
+      setCommentNodeId(null);
+    }
+  }, [nodes, commentNodeId]);
 
-  setNodes((existingNodes) => [...existingNodes, nodeToAdd]);
-}, [setNodes, getUserIP]);
+  const handleShowComments = useCallback((nodeId) => {
+    setCommentNodeId(nodeId);
+  }, []);
 
-// --- Handler para resetear flujo
-const handleResetFlow = useCallback(() => {
-  setNodes(initialNodes);
-  setEdges(initialEdges);
-  setFeedback('Flujo reseteado.');
-  setTimeout(() => setFeedback(''), 1700);
-}, [setNodes, setEdges]);
+  const handleCloseComments = useCallback(() => {
+    setCommentNodeId(null);
+  }, []);
 
   // Dragging context menu
   const [isDragging, setIsDragging] = useState(false);
@@ -122,19 +122,137 @@ const handleResetFlow = useCallback(() => {
   // -------------------------
   // handleChangeLabel (declaro acá; usa setNodes que ya existe)
   // -------------------------
-  const handleChangeLabel = useCallback((nodeId, newData) => {
-    setNodes((nds) =>
-      nds.map((n) =>
-        n.id === nodeId ? { ...n, data: { ...n.data, ...newData, onChangeLabel: handleChangeLabel } } : n
+  const handleChangeLabel = useCallback(
+    (nodeId, newData) => {
+      setNodes((nds) =>
+        nds.map((n) => {
+          if (n.id !== nodeId) return n;
+          const mergedData = { ...n.data, ...newData };
+          const comments = Array.isArray(mergedData.comments)
+            ? mergedData.comments
+            : Array.isArray(n.data?.comments)
+            ? n.data.comments
+            : [];
+
+          return {
+            ...n,
+            data: {
+              ...mergedData,
+              comments,
+              onChangeLabel: handleChangeLabel,
+              onShowComments: handleShowComments
+            }
+          };
+        })
+      );
+    },
+    [setNodes, handleShowComments]
+  );
+
+  const handleAddComment = useCallback(
+    (nodeId, commentText) => {
+      const text = commentText?.trim();
+      if (!text) return;
+
+      const newComment = {
+        id: getId(),
+        text,
+        createdAt: new Date().toISOString()
+      };
+
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === nodeId
+            ? {
+                ...n,
+                data: {
+                  ...n.data,
+                  comments: [
+                    ...(Array.isArray(n.data?.comments) ? n.data.comments : []),
+                    newComment
+                  ],
+                  onChangeLabel: handleChangeLabel,
+                  onShowComments: handleShowComments
+                }
+              }
+            : n
+        )
+      );
+    },
+    [setNodes, handleChangeLabel, handleShowComments]
+  );
+
+  // --- Handler para agregar un nodo desde el sidebar
+  const handleAddNode = useCallback(
+    async ({ name, time, inCharge, type = 'custom' }) => {
+      const userIP = await getUserIP();
+      const position = { x: 120 + Math.random() * 200, y: 120 + Math.random() * 80 };
+
+      const nodeToAdd =
+        type === 'custom'
+          ? {
+              id: getId(),
+              type: 'custom',
+              position,
+              data: {
+                name,
+                time,
+                inCharge,
+                ip: userIP,
+                progress: 0,
+                comments: [],
+                onChangeLabel: handleChangeLabel,
+                onShowComments: handleShowComments
+              }
+            }
+          : {
+              id: getId(),
+              // sin `type` => nodo normal por defecto en React Flow
+              position,
+              data: { label: name }
+            };
+
+      setNodes((existingNodes) => [...existingNodes, nodeToAdd]);
+    },
+    [setNodes, getUserIP, handleChangeLabel, handleShowComments]
+  );
+
+  const handleResetFlow = useCallback(() => {
+    setNodes(
+      initialNodes.map((node) =>
+        node.type === 'custom'
+          ? {
+              ...node,
+              data: {
+                ...node.data,
+                comments: Array.isArray(node.data?.comments) ? node.data.comments : [],
+                onChangeLabel: handleChangeLabel,
+                onShowComments: handleShowComments
+              }
+            }
+          : node
       )
     );
-  }, [setNodes]);
+    setEdges(initialEdges);
+    setFeedback('Flujo reseteado.');
+    setTimeout(() => setFeedback(''), 1700);
+  }, [setNodes, setEdges, handleChangeLabel, handleShowComments]);
 
   // Inyectar onChangeLabel en nodos custom al montar / cuando cambien nodesInit
   useEffect(() => {
     setNodes((nds) =>
       nds.map((n) =>
-        n.type === 'custom' ? { ...n, data: { ...n.data, onChangeLabel: handleChangeLabel } } : n
+        n.type === 'custom'
+          ? {
+              ...n,
+              data: {
+                ...n.data,
+                comments: Array.isArray(n.data?.comments) ? n.data.comments : [],
+                onChangeLabel: handleChangeLabel,
+                onShowComments: handleShowComments
+              }
+            }
+          : n
       )
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -179,7 +297,16 @@ const handleResetFlow = useCallback(() => {
         position,
         data:
           type === 'custom'
-            ? { name: label, time, inCharge, ip: userIP, progress: 0, onChangeLabel: handleChangeLabel }
+            ? {
+                name: label,
+                time,
+                inCharge,
+                ip: userIP,
+                progress: 0,
+                comments: [],
+                onChangeLabel: handleChangeLabel,
+                onShowComments: handleShowComments
+              }
             : { label }
       };
 
@@ -270,6 +397,7 @@ const handleResetFlow = useCallback(() => {
       const nodesForSave = instanceNodes.map((n) => {
         const safeData = { ...n.data };
         if (safeData.onChangeLabel) delete safeData.onChangeLabel;
+        if (safeData.onShowComments) delete safeData.onShowComments;
         // borrar otras props no serializables si las hubiese
         return { id: n.id, type: n.type, position: n.position, data: safeData };
       });
@@ -306,7 +434,9 @@ const handleResetFlow = useCallback(() => {
                   inCharge: editingNodeData.inCharge,
                   progress: editingNodeData.progress !== undefined ? Math.max(0, Math.min(100, Number(editingNodeData.progress) || 0)) : 0,
                   ip: userIP, // Actualizar con la IP del usuario que modifica
-                  onChangeLabel: handleChangeLabel
+                  comments: Array.isArray(n.data?.comments) ? n.data.comments : [],
+                  onChangeLabel: handleChangeLabel,
+                  onShowComments: handleShowComments
                 }
               }
             : n
@@ -373,6 +503,7 @@ const handleResetFlow = useCallback(() => {
       const nodesForExport = instanceNodes.map((n) => {
         const safeData = { ...n.data };
         if (safeData.onChangeLabel) delete safeData.onChangeLabel;
+        if (safeData.onShowComments) delete safeData.onShowComments;
         return { id: n.id, type: n.type, position: n.position, data: safeData };
       });
 
@@ -403,7 +534,14 @@ const handleResetFlow = useCallback(() => {
 
   return (
     <div className="flow-container" style={{ display: 'flex', gap: 8 }}>
-      <FlowSidebar onAddNode={handleAddNode} onResetFlow={handleResetFlow} nodes={nodes}>
+      <FlowSidebar
+        onAddNode={handleAddNode}
+        onResetFlow={handleResetFlow}
+        nodes={nodes}
+        commentNode={commentNode}
+        onAddComment={handleAddComment}
+        onCloseComments={handleCloseComments}
+      >
         <hr className="flow-separator" />
         <h4 className="flow-tips-title">Tips</h4>
         <ul className="flow-tips-list">
