@@ -36,12 +36,14 @@ export const useEdgeOperations = (workflowId, setEdges, onSuccess, onError) => {
       // Guardar en backend
       const savedEdge = await workflowApi.createEdge(workflowId, {
         workflow: parseInt(workflowId),
-        source_node: parseInt(connection.source),
-        target_node: parseInt(connection.target),
-        edge_type: connection.type || 'default',
+        source: parseInt(connection.source),  // ForeignKey a Node
+        target: parseInt(connection.target),  // ForeignKey a Node
         label: connection.label || '',
-        animated: connection.animated || false,
-        style: connection.style || {},
+        data: {
+          edge_type: connection.type || 'default',
+          animated: connection.animated || false,
+          style: connection.style || {},
+        }
       });
 
       // Actualizar con ID real del backend

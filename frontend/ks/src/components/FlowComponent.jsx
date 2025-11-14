@@ -10,12 +10,19 @@ import { useLocation } from 'react-router-dom';
 import { getId } from './flowUtils';
 import { workflowApi } from '../api/workflowApi';
 
+
+
+
+
+
+// Definir los tipos de nodos personalizados para React Flow
 const nodeTypes = { custom: CustomNode };
 
 // Nodos iniciales de respaldo
 const initialNodes = [
   { id: '1', type: 'custom', position: { x: 250, y: 5 }, data: { name: 'Nodo A', time: '2h', inCharge: 'Usuario 1', progress: 0 } },
 ];
+
 const initialEdges = [];
 
 // ============================================
@@ -25,7 +32,7 @@ export default function FlowComponent() {
   const reactFlowWrapper = useRef(null);
   const reactFlowInstance = useRef(null);
 
-  // Obtener workflowId desde querystring
+  // Obtener workflowId desde querystring (useLocation + URLSearchParams)
   const location = useLocation();
   const params = new URLSearchParams(location.search);
   const workflowId = params.get('workflowId');
@@ -57,17 +64,23 @@ export default function FlowComponent() {
   // Cargar datos desde el backend al montar
   // ============================================
   useEffect(() => {
+    let cancelled = false;
+
     const loadWorkflowData = async () => {
       if (!workflowId) {
-        setFeedback('No hay workflowId. Usando flujo inicial.');
-        setNodes(initialNodes);
-        setEdges(initialEdges);
-        setIsLoading(false);
+        if (!cancelled) {
+          setFeedback('No hay workflowId. Usando flujo inicial.');
+          setNodes(initialNodes);
+          setEdges(initialEdges);
+          setIsLoading(false);
+        }
         return;
       }
 
-      setIsLoading(true);
-      setLoadError(null);
+      if (!cancelled) {
+        setIsLoading(true);
+        setLoadError(null);
+      }
 
       try {
         const [nodesData, edgesData] = await Promise.all([
@@ -75,9 +88,8 @@ export default function FlowComponent() {
           workflowApi.fetchEdges(workflowId),
         ]);
 
-        // Transformar nodos del backend al formato de ReactFlow
-        const transformedNodes = nodesData.map((node) => ({
-          id: node.id.toString(),
+        const transformedNodes = (nodesData || []).map((node) => ({
+          id: String(node.id),
           type: node.node_type === 'custom' ? 'custom' : undefined,
           position: node.position || { x: 100, y: 100 },
           data: {
@@ -89,34 +101,39 @@ export default function FlowComponent() {
           },
         }));
 
-        // Transformar edges del backend al formato de ReactFlow
-        const transformedEdges = edgesData.map((edge) => ({
-          id: edge.id.toString(),
-          source: edge.source_node.toString(),
-          target: edge.target_node.toString(),
+        const transformedEdges = (edgesData || []).map((edge) => ({
+          id: String(edge.id),
+          source: String(edge.source_node),
+          target: String(edge.target_node),
           label: edge.label || edge.condition_type || '',
           type: edge.edge_type || 'default',
           animated: edge.animated || false,
           style: edge.style || {},
         }));
 
-        setNodes(transformedNodes);
-        setEdges(transformedEdges);
-        setFeedback('Workflow cargado correctamente.');
-        setTimeout(() => setFeedback(''), 2000);
+        if (!cancelled) {
+          setNodes(transformedNodes);
+          setEdges(transformedEdges);
+          setFeedback('Workflow cargado correctamente.');
+          setTimeout(() => { if (!cancelled) setFeedback(''); }, 2000);
+        }
       } catch (error) {
         console.error('Error cargando workflow:', error);
-        setLoadError(error.message);
-        setFeedback(`Error: ${error.message}`);
-        setNodes(initialNodes);
-        setEdges(initialEdges);
+        if (!cancelled) {
+          setLoadError(error.message);
+          setFeedback(`Error: ${error.message}`);
+          setNodes(initialNodes);
+          setEdges(initialEdges);
+        }
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     };
 
     loadWorkflowData();
-  }, [workflowId]);
+
+    return () => { cancelled = true; };
+  }, [workflowId, setNodes, setEdges]);
 
   // ============================================
   // Función para obtener IP del usuario
@@ -133,7 +150,7 @@ export default function FlowComponent() {
   }, []);
 
   // ============================================
-  // Handler para cambiar etiquetas (inline edit)
+  // Handlers y utilidades
   // ============================================
   const handleChangeLabel = useCallback((nodeId, newData) => {
     setNodes((nds) =>
@@ -145,7 +162,6 @@ export default function FlowComponent() {
     );
   }, [setNodes]);
 
-  // Inyectar onChangeLabel en todos los nodos custom
   useEffect(() => {
     setNodes((nds) =>
       nds.map((n) =>
@@ -156,11 +172,8 @@ export default function FlowComponent() {
     );
   }, [handleChangeLabel, setNodes]);
 
-  // ============================================
-  // Handler para agregar nodo (desde sidebar)
-  // ACTUALIZADO: Ahora incluye progress y type
-  // ============================================
   const handleAddNode = useCallback(async ({ name, time, inCharge, type = 'custom' }) => {
+    const tempId = String(getId()); // temp ID como string
     if (!workflowId) {
       setFeedback('No hay workflowId activo.');
       return;
@@ -168,7 +181,6 @@ export default function FlowComponent() {
 
     try {
       const userIP = await getUserIP();
-      const tempId = getId();
       const position = { x: 120 + Math.random() * 200, y: 120 + Math.random() * 80 };
 
       const nodeToAdd =
@@ -192,26 +204,22 @@ export default function FlowComponent() {
               data: { label: name }
             };
 
-      // Agregar localmente primero (optimistic update)
+      // Optimistic update
       setNodes((existingNodes) => [...existingNodes, nodeToAdd]);
 
-      // Guardar en el backend
+      // Guardar en backend (IDs mantenidos como strings en frontend)
       const savedNode = await workflowApi.createNode(workflowId, {
-        workflow: parseInt(workflowId),
+        workflow: workflowId,           // mantén workflowId tal cual (backend decide)
         node_type: type,
-        name: name,
-        position: position,
-        data: type === 'custom' 
-          ? { name, time, inCharge, ip: userIP, progress: 0 }
-          : { label: name }
+        name,
+        position,
+        data: type === 'custom' ? { name, time, inCharge, ip: userIP, progress: 0 } : { label: name }
       });
 
-      // Actualizar con el ID real del backend
+      // Reemplazar tempId por id real (convertido a string)
       setNodes((nds) =>
         nds.map((n) =>
-          n.id === tempId 
-            ? { ...n, id: savedNode.id.toString() } 
-            : n
+          n.id === tempId ? { ...n, id: String(savedNode.id) } : n
         )
       );
 
@@ -220,14 +228,10 @@ export default function FlowComponent() {
     } catch (error) {
       console.error('Error creando nodo:', error);
       setFeedback(`Error: ${error.message}`);
-      // Revertir optimistic update en caso de error
-      setNodes((nds) => nds.filter((n) => n.id !== tempId));
+      setNodes((nds) => nds.filter((n) => n.id !== tempId)); // Revertir
     }
   }, [workflowId, setNodes, getUserIP, handleChangeLabel]);
 
-  // ============================================
-  // Handler para resetear flujo
-  // ============================================
   const handleResetFlow = useCallback(() => {
     setNodes(initialNodes);
     setEdges(initialEdges);
@@ -235,19 +239,16 @@ export default function FlowComponent() {
     setTimeout(() => setFeedback(''), 1700);
   }, [setNodes, setEdges]);
 
-  // ============================================
-  // Handlers de ReactFlow
-  // ============================================
+  // onConnect: usar IDs string (no parseInt)
   const onConnect = useCallback(async (params) => {
     setEdges((eds) => addEdge(params, eds));
-    
-    // Guardar edge en el backend
+
     if (workflowId) {
       try {
         await workflowApi.createEdge(workflowId, {
-          workflow: parseInt(workflowId),
-          source_node: parseInt(params.source),
-          target_node: parseInt(params.target),
+          workflow: workflowId,
+          source_node: String(params.source),
+          target_node: String(params.target),
           edge_type: params.type || 'default',
           label: params.label || '',
         });
@@ -272,7 +273,7 @@ export default function FlowComponent() {
         });
       }
 
-      const tempId = getId();
+      const tempId = String(getId());
       const newNode = {
         id: tempId,
         type: type === 'custom' ? 'custom' : undefined,
@@ -284,20 +285,17 @@ export default function FlowComponent() {
 
       setNodes((nds) => nds.concat(newNode));
 
-      // Guardar en backend si hay workflowId
       if (workflowId) {
         try {
           const savedNode = await workflowApi.createNode(workflowId, {
-            workflow: parseInt(workflowId),
+            workflow: workflowId,
             node_type: type,
             name: label,
-            position: position,
-            data: type === 'custom' 
-              ? { name: label, time, inCharge, ip: userIP, progress: 0 }
-              : { label }
+            position,
+            data: type === 'custom' ? { name: label, time, inCharge, ip: userIP, progress: 0 } : { label }
           });
 
-          setNodes((nds) => nds.map((n) => n.id === tempId ? { ...n, id: savedNode.id.toString() } : n));
+          setNodes((nds) => nds.map((n) => (n.id === tempId ? { ...n, id: String(savedNode.id) } : n)));
         } catch (error) {
           console.error('Error guardando nodo centrado:', error);
           setFeedback(`Error: ${error.message}`);
@@ -330,10 +328,6 @@ export default function FlowComponent() {
     setIsDragging(false);
   }, []);
 
-  // ============================================
-  // Actualizar nodo desde menú contextual
-  // ACTUALIZADO: Ahora incluye progress con validación
-  // ============================================
   const updateNodeData = useCallback(async () => {
     if (!selectedNode || !workflowId) return;
 
@@ -341,7 +335,6 @@ export default function FlowComponent() {
       const userIP = await getUserIP();
       const validProgress = Math.max(0, Math.min(100, Number(editingNodeData.progress) || 0));
       
-      // Actualizar localmente
       setNodes((nds) =>
         nds.map((n) =>
           n.id === selectedNode.id
@@ -361,7 +354,6 @@ export default function FlowComponent() {
         )
       );
 
-      // Actualizar en el backend
       await workflowApi.updateNode(workflowId, selectedNode.id, {
         name: editingNodeData.name,
         data: {
@@ -383,7 +375,7 @@ export default function FlowComponent() {
   }, [selectedNode, editingNodeData, setNodes, handleChangeLabel, closeContextMenu, getUserIP, workflowId]);
 
   // ============================================
-  // Guardar workflow completo
+  // Guardar workflow completo (nodos y edges)
   // ============================================
   const saveWorkflowToBackend = useCallback(async () => {
     if (!workflowId) {
@@ -395,22 +387,22 @@ export default function FlowComponent() {
       const instanceNodes = reactFlowInstance?.current?.getNodes?.() ?? nodes;
 
       const nodesForSave = instanceNodes.map((n) => ({
-        id: parseInt(n.id),
+        id: n.id, // mantener string
         node_type: n.type || 'default',
         position: n.position,
         data: {
-          name: n.data.name,
-          time: n.data.time,
-          inCharge: n.data.inCharge,
-          ip: n.data.ip,
-          progress: n.data.progress !== undefined ? n.data.progress : 0
+          name: n.data?.name,
+          time: n.data?.time,
+          inCharge: n.data?.inCharge,
+          ip: n.data?.ip,
+          progress: n.data?.progress !== undefined ? n.data.progress : 0
         }
       }));
 
       const edgesForSave = edges.map((e) => ({
-        id: parseInt(e.id),
-        source_node: parseInt(e.source),
-        target_node: parseInt(e.target),
+        id: e.id,               // string
+        source_node: e.source,  // string
+        target_node: e.target,  // string
         label: e.label,
         edge_type: e.type || 'default',
         animated: e.animated || false,
@@ -480,7 +472,7 @@ export default function FlowComponent() {
   }, [nodes, edges, workflowId]);
 
   // ============================================
-  // Otros handlers
+  // Otros handlers (edge click, delete, etc.)
   // ============================================
   const onDragOver = useCallback((event) => {
     event.preventDefault();
@@ -495,7 +487,6 @@ export default function FlowComponent() {
   const saveEdgeLabel = useCallback(async (edgeId, newLabel) => {
     setEdges((eds) => eds.map((e) => (e.id === edgeId ? { ...e, label: newLabel } : e)));
     
-    // Actualizar en backend
     if (workflowId) {
       try {
         await workflowApi.updateEdge(workflowId, edgeId, { label: newLabel });
@@ -509,7 +500,6 @@ export default function FlowComponent() {
     setEdges((eds) => eds.filter((e) => e.id !== edgeId));
     setSelectedEdgeId(null);
     
-    // Eliminar del backend
     if (workflowId) {
       try {
         await workflowApi.deleteEdge(workflowId, edgeId);
@@ -527,7 +517,7 @@ export default function FlowComponent() {
     reactFlowInstance.current = instance;
   }, []);
 
-  // Handlers de drag para menú contextual
+  // Drag handlers for context menu
   const handleDragStart = useCallback((event) => {
     event.preventDefault();
     setIsDragging(true);
@@ -557,7 +547,6 @@ export default function FlowComponent() {
 
   const handleDragEnd = useCallback(() => setIsDragging(false), []);
 
-  // Effects para menú contextual
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (isContextMenuVisible && !event.target.closest('.node-context-menu')) {

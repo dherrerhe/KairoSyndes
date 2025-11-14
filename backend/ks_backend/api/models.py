@@ -4,6 +4,9 @@ from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.utils import timezone
 from django.contrib.auth.hashers import make_password
 
+# ===========================
+# User Manager & User Model
+# ===========================
 
 class UserManager(BaseUserManager):
     """
@@ -48,7 +51,7 @@ class UserManager(BaseUserManager):
         
         # Guardar el usuario en la base de datos
         user.save(using=self._db)
-        
+
         return user
 
     def create_superuser(self, email, nickname, password=None, **extra_fields):
@@ -224,31 +227,81 @@ class User(AbstractUser):
         verbose_name = "Usuario"
         verbose_name_plural = "Usuarios"
 
+# =================
+# Workflow Model
+# =================
 
 class Workflow(models.Model):
-    """
-    Modelo que representa un flujo de trabajo en el sistema.
-    Almacena la configuración y datos del workflow en formato JSON.
-    """
-    
-    # Nombre descriptivo del flujo de trabajo.
-    # Si no se proporciona, usa "Untitled Workflow" por defecto.
     name = models.CharField(max_length=255, default="Untitled Workflow")
-    
-    # Datos del workflow almacenados en formato JSON.
-    # Permite almacenar estructuras complejas como nodos, conexiones, configuraciones, etc.
     data = models.JSONField()
-    
-    # Fecha y hora de creación del workflow.
-    # auto_now_add=True establece automáticamente el timestamp cuando se crea el registro (solo al crear, no al actualizar).
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
     def __str__(self):
-        """Representación en string del workflow."""
         return self.name
     
     class Meta:
-        """Metadatos del modelo."""
         verbose_name = "Workflow"
         verbose_name_plural = "Workflows"
-        ordering = ['-created_at']  # Ordena por más reciente primero
+        ordering = ['-created_at']
+
+# ===================================================
+# MODELOS IMPORTANTES AGREGADOS
+# ===================================================
+
+class Node(models.Model):
+    """
+    Nodo individual para un workflow. Representa una tarea/paso específico.
+    """
+    workflow = models.ForeignKey(Workflow, on_delete=models.CASCADE, related_name='nodes')
+    node_type = models.CharField(max_length=50, default='custom')  # tipo (custom, normal, etc.)
+    position = models.JSONField(default=dict)  # {'x': ..., 'y': ...}
+    data = models.JSONField(default=dict)      # metadatos específicos del nodo (etiqueta, nombre, inCharge, etc.)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Node {self.id} in {self.workflow.name}"
+    
+    class Meta:
+        verbose_name = "Nodo"
+        verbose_name_plural = "Nodos"
+        ordering = ['id']
+
+class Edge(models.Model):
+    """
+    Conexión/relación (arista) entre dos nodos de un workflow.
+    """
+    workflow = models.ForeignKey(Workflow, on_delete=models.CASCADE, related_name='edges')
+    source = models.ForeignKey(Node, on_delete=models.CASCADE, related_name='edges_out')
+    target = models.ForeignKey(Node, on_delete=models.CASCADE, related_name='edges_in')
+    label = models.CharField(max_length=100, blank=True, default="")
+    data = models.JSONField(default=dict, blank=True)  # Info extra de la arista (puede estar vacío)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Edge {self.id} ({self.source_id} -> {self.target_id}) in {self.workflow.name}"
+
+    class Meta:
+        verbose_name = "Arista"
+        verbose_name_plural = "Aristas"
+        ordering = ['id']
+
+# =======================================
+# (Opcional) Permitir compartir workflows
+# =======================================
+
+class WorkflowShare(models.Model):
+    """
+    Permite compartir un workflow con otro usuario (sólo lectura o edición).
+    """
+    workflow = models.ForeignKey(Workflow, on_delete=models.CASCADE, related_name='shares')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='shared_workflows')
+    can_edit = models.BooleanField(default=False)
+    shared_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('workflow', 'user')
+        verbose_name = "Compartir Workflow"
+        verbose_name_plural = "Compartidos Workflows"
+
+    def __str__(self):
+        return f"{self.workflow.name} compartido con {self.user.nickname}"

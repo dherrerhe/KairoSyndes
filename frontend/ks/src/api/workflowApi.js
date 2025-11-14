@@ -1,6 +1,7 @@
 // src/api/workflowApi.js
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || '/api'; // Usando proxy configurado en package.json
+// Usando proxy configurado en package.json
+const API_BASE_URL = process.env.REACT_APP_API_URL || '/api';
 
 /**
  * Función helper para hacer llamadas a la API
@@ -294,12 +295,12 @@ export const transformNodeFromBackend = (backendNode) => ({
  */
 export const transformEdgeFromBackend = (backendEdge) => ({
   id: backendEdge.id.toString(),
-  source: backendEdge.source_node.toString(),
-  target: backendEdge.target_node.toString(),
-  label: backendEdge.label || backendEdge.condition_type || '',
-  type: backendEdge.edge_type || 'default',
-  animated: backendEdge.animated || false,
-  style: backendEdge.style || {},
+  source: (backendEdge.source?.id || backendEdge.source).toString(),
+  target: (backendEdge.target?.id || backendEdge.target).toString(),
+  label: backendEdge.label || '',
+  type: backendEdge.data?.edge_type || 'default',
+  animated: backendEdge.data?.animated || false,
+  style: backendEdge.data?.style || {},
 });
 
 /**

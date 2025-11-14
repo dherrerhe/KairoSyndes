@@ -10,6 +10,7 @@ from .models import Workflow
 from .serializers import WorkflowSerializer
 
 
+
 # Vista para login de usuario.
 class LoginView(APIView):
     permission_classes = [AllowAny]
@@ -61,3 +62,29 @@ class WorkflowCreateView(APIView):
         serializer = WorkflowSerializer(workflows, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+class WorkflowDetailUpdateView(APIView):
+
+    def get(self, request, pk):
+        """Retorna el workflow solicitado."""
+        try:
+            wf = Workflow.objects.get(pk=pk)
+        except Workflow.DoesNotExist:
+            return Response({"error": "Workflow no encontrado"}, status=404)
+
+        serializer = WorkflowSerializer(wf)
+        return Response(serializer.data, status=200)
+
+    def patch(self, request, pk):
+        """Actualiza parcialmente el workflow (por ejemplo, nodos/edges)."""
+        try:
+            wf = Workflow.objects.get(pk=pk)
+        except Workflow.DoesNotExist:
+            return Response({"error": "Workflow no encontrado"}, status=404)
+
+        serializer = WorkflowSerializer(wf, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message": "Workflow actualizado", "workflow": serializer.data}, status=200)
+
+        return Response(serializer.errors, status=400)
