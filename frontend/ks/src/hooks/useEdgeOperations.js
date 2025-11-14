@@ -24,12 +24,14 @@ export const useEdgeOperations = (workflowId, setEdges, onSuccess, onError) => {
       return null;
     }
 
+    // Usar una variable para guardar el edge temporal (optimistic update)
+    let newEdgeTempId = null;
+
     try {
       // Agregar edge localmente (optimistic update)
-      let newEdge = null;
       setEdges((eds) => {
         const updatedEdges = addEdge(connection, eds);
-        newEdge = updatedEdges[updatedEdges.length - 1];
+        newEdgeTempId = updatedEdges[updatedEdges.length - 1]?.id;
         return updatedEdges;
       });
 
@@ -49,7 +51,7 @@ export const useEdgeOperations = (workflowId, setEdges, onSuccess, onError) => {
       // Actualizar con ID real del backend
       setEdges((eds) =>
         eds.map((e) =>
-          e.id === newEdge.id
+          e.id === newEdgeTempId
             ? { ...e, id: savedEdge.id.toString() }
             : e
         )
@@ -62,8 +64,8 @@ export const useEdgeOperations = (workflowId, setEdges, onSuccess, onError) => {
       console.error('Error creando edge:', error);
       onError?.(error.message);
       // Revertir optimistic update
-      if (newEdge) {
-        setEdges((eds) => eds.filter((e) => e.id !== newEdge.id));
+      if (newEdgeTempId) {
+        setEdges((eds) => eds.filter((e) => e.id !== newEdgeTempId));
       }
       return null;
     }
@@ -121,11 +123,13 @@ export const useEdgeOperations = (workflowId, setEdges, onSuccess, onError) => {
       return false;
     }
 
+    // Usar una variable para guardar el edge eliminado por si hay que revertir
+    let deletedEdgeBackup = null;
+
     try {
       // Guardar edge para poder revertir
-      let deletedEdge = null;
       setEdges((eds) => {
-        deletedEdge = eds.find(e => e.id === edgeId);
+        deletedEdgeBackup = eds.find(e => e.id === edgeId);
         return eds.filter((e) => e.id !== edgeId);
       });
 
@@ -139,8 +143,8 @@ export const useEdgeOperations = (workflowId, setEdges, onSuccess, onError) => {
       console.error('Error eliminando edge:', error);
       onError?.(error.message);
       // Revertir eliminación
-      if (deletedEdge) {
-        setEdges((eds) => [...eds, deletedEdge]);
+      if (deletedEdgeBackup) {
+        setEdges((eds) => [...eds, deletedEdgeBackup]);
       }
       return false;
     }

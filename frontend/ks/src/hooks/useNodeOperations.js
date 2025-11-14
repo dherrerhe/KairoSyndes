@@ -4,10 +4,6 @@ import { useCallback } from 'react';
 import { workflowApi } from '../api/workflowApi';
 import { getId } from '../components/flowUtils';
 
-
-
-
-
 /**
  * Hook para operaciones CRUD de nodos
  * @param {string|number} workflowId - ID del workflow
@@ -43,9 +39,12 @@ export const useNodeOperations = (workflowId, setNodes, onSuccess, onError) => {
       return null;
     }
 
+    // Declarar tempId fuera del try/catch para que esté disponible en ambos bloques
+    let tempId;
+
     try {
       const userIP = await getUserIP();
-      const tempId = getId();
+      tempId = String(getId());
       
       // Generar posición aleatoria si no se proporciona
       const nodePosition = position || {
@@ -98,7 +97,9 @@ export const useNodeOperations = (workflowId, setNodes, onSuccess, onError) => {
       console.error('Error creando nodo:', error);
       onError?.(error.message);
       // Revertir optimistic update
-      setNodes((nds) => nds.filter((n) => n.id !== tempId));
+      if (tempId) {
+        setNodes((nds) => nds.filter((n) => n.id !== tempId));
+      }
       return null;
     }
   }, [workflowId, setNodes, getUserIP, onSuccess, onError]);
@@ -195,11 +196,14 @@ export const useNodeOperations = (workflowId, setNodes, onSuccess, onError) => {
       return false;
     }
 
+    // Usar una referencia mutable para conservar el nodo eliminado
+    let deletedNodeRef = { current: null };
+
     try {
-      // Guardar nodo para poder revertir
-      let deletedNode = null;
+      // Guardar nodo para poder revertir, usando ref para que esté accesible en catch
       setNodes((nds) => {
-        deletedNode = nds.find(n => n.id === nodeId);
+        const foundNode = nds.find(n => n.id === nodeId);
+        deletedNodeRef.current = foundNode;
         return nds.filter((n) => n.id !== nodeId);
       });
 
@@ -212,9 +216,12 @@ export const useNodeOperations = (workflowId, setNodes, onSuccess, onError) => {
     } catch (error) {
       console.error('Error eliminando nodo:', error);
       onError?.(error.message);
-      // Revertir eliminación
-      if (deletedNode) {
-        setNodes((nds) => [...nds, deletedNode]);
+      // Revertir eliminación solo si deletedNode es válido y no existe en la lista
+      if (deletedNodeRef.current) {
+        setNodes((nds) => {
+          const exists = nds.some(n => n.id === deletedNodeRef.current.id);
+          return exists ? nds : [...nds, deletedNodeRef.current];
+        });
       }
       return false;
     }

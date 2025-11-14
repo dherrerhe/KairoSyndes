@@ -1,11 +1,13 @@
 // src/pages/login.js
 import React, { useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import Login from '../components/Login';
 
+// Importa useAuth si lo necesitas (no navigate aquí)
+import useAuth from '../hooks/useAuth';
 
-const LoginPage = () => {
-  const navigate = useNavigate();
+const LoginPage = ({ onLoginSuccess }) => {
+  // Quita navigate (el wrapper del router hará el redirect tras login)
+  const { setIsAuthenticated } = useAuth();
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -51,8 +53,14 @@ const LoginPage = () => {
       }
 
       if (data.token) {
-        localStorage.setItem('token', data.token);
-        navigate("/"); // Redirige al dashboard/home
+        // Usa el estándar: guarda el token como 'authToken' para integración con useAuth.js
+        localStorage.setItem('authToken', data.token);
+        setIsAuthenticated(true);
+
+        // Si hay un callback onLoginSuccess (App lo pasa), llámalo para navegar
+        if (onLoginSuccess) {
+          onLoginSuccess(data.token);
+        }
       } else {
         setErrors({ general: 'Respuesta inesperada del servidor' });
       }
@@ -62,7 +70,7 @@ const LoginPage = () => {
     } finally {
       setIsSubmitting(false);
     }
-  }, [formData, navigate]);
+  }, [formData, setIsAuthenticated, onLoginSuccess]);
 
   return (
     <Login
