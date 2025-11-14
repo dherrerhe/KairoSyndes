@@ -154,6 +154,6 @@ CORS_ALLOWED_ORIGINS = [
 
 AUTH_USER_MODEL = 'api.User'
 AUTHENTICATION_BACKENDS = [
-    'api.backends.EmailBackend',
-    'django.contrib.auth.backends.ModelBackend',
+    'api.backends.EmailBackend',  # ← Primero
+    'django.contrib.auth.backends.ModelBackend',  # ← Después
 ]

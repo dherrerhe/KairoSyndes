@@ -24,7 +24,6 @@ const LoginPage = () => {
     setIsSubmitting(true);
     setErrors({});
     
-    // Validación simple
     const validationErrors = {};
     if (!formData.email.trim()) validationErrors.email = 'El correo es obligatorio';
     if (!formData.password) validationErrors.password = 'La contraseña es obligatoria';
@@ -34,7 +33,7 @@ const LoginPage = () => {
       setIsSubmitting(false);
       return;
     }
-
+  
     try {
       const response = await fetch('/api/login/', {
         method: 'POST',
@@ -43,31 +42,35 @@ const LoginPage = () => {
         },
         body: JSON.stringify(formData)
       });
-
+  
       const data = await response.json();
-
+  
       if (!response.ok) {
         setErrors({ general: data.error || 'Error al iniciar sesión' });
         setIsSubmitting(false);
         return;
       }
-
-      if (data.token) {
-        // Guardar token en localStorage
+  
+      if (data.token && data.user) {
+        // Guardar token
         localStorage.setItem('auth_token', data.token);
         
-        // Guardar email del usuario (opcional, para mostrar en UI)
-        localStorage.setItem('user_email', formData.email);
+        // Guardar datos del usuario (completos)
+        localStorage.setItem('user_email', data.user.email);
+        localStorage.setItem('user_nickname', data.user.nickname || '');
+        localStorage.setItem('user_id', data.user.id);
+        
+        console.log('Login exitoso:', data.user);
         
         // Redirigir a Home
         navigate('/Home');
       } else {
         setErrors({ general: 'Respuesta inesperada del servidor' });
       }
-
+  
     } catch (err) {
       console.error('Error de login:', err);
-      setErrors({ general: 'Fallo la conexión con el servidor' });
+      setErrors({ general: 'Falló la conexión con el servidor' });
     } finally {
       setIsSubmitting(false);
     }

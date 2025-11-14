@@ -9,9 +9,10 @@ const API_BASE_URL = process.env.REACT_APP_API_URL || '/api';
  */
 const apiCall = async (endpoint, options = {}) => {
   const token = localStorage.getItem('auth_token');
+  
   const headers = {
     'Content-Type': 'application/json',
-    ...(token && { 'Authorization': `Bearer ${token}` }),
+    ...(token && { 'Authorization': `Token ${token}` }), // ← "Token" no "Bearer"
     ...options.headers,
   };
 
@@ -21,12 +22,15 @@ const apiCall = async (endpoint, options = {}) => {
       headers,
     });
 
+    // Debug: log de headers enviados
+    console.log('Headers enviados:', headers);
+    console.log('Response status:', response.status);
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.detail || errorData.error || `Error ${response.status}`);
     }
 
-    // Si es DELETE, puede no tener contenido
     if (response.status === 204) {
       return null;
     }
@@ -37,7 +41,6 @@ const apiCall = async (endpoint, options = {}) => {
     throw error;
   }
 };
-
 /**
  * API de Workflows
  * Centraliza todas las operaciones CRUD con el backend Django
