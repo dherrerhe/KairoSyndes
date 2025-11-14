@@ -57,7 +57,7 @@ const LoginPage = () => {
         // Guardar email del usuario (opcional, para mostrar en UI)
         localStorage.setItem('user_email', formData.email);
         
-        // ✅ Redirigir a Home
+        // Redirigir a Home
         navigate('/Home');
       } else {
         setErrors({ general: 'Respuesta inesperada del servidor' });
