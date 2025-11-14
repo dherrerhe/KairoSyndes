@@ -1,13 +1,10 @@
-// src/pages/login.js
+// src/pages/Login.js
 import React, { useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Login from '../components/Login';
 
-// Importa useAuth si lo necesitas (no navigate aquí)
-import useAuth from '../hooks/useAuth';
-
-const LoginPage = ({ onLoginSuccess }) => {
-  // Quita navigate (el wrapper del router hará el redirect tras login)
-  const { setIsAuthenticated } = useAuth();
+const LoginPage = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -27,8 +24,9 @@ const LoginPage = ({ onLoginSuccess }) => {
     
     // Validación simple
     const validationErrors = {};
-    //if (!formData.email.trim()) validationErrors.email = 'El correo es obligatorio';
+    if (!formData.email.trim()) validationErrors.email = 'El correo es obligatorio';
     if (!formData.password) validationErrors.password = 'La contraseña es obligatoria';
+    
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       setIsSubmitting(false);
@@ -53,24 +51,25 @@ const LoginPage = ({ onLoginSuccess }) => {
       }
 
       if (data.token) {
-        // Usa el estándar: guarda el token como 'authToken' para integración con useAuth.js
-        localStorage.setItem('authToken', data.token);
-        setIsAuthenticated(true);
-
-        // Si hay un callback onLoginSuccess (App lo pasa), llámalo para navegar
-        if (onLoginSuccess) {
-          onLoginSuccess(data.token);
-        }
+        // Guardar token en localStorage
+        localStorage.setItem('auth_token', data.token);
+        
+        // Guardar email del usuario (opcional, para mostrar en UI)
+        localStorage.setItem('user_email', formData.email);
+        
+        // ✅ Redirigir a Home
+        navigate('/Home');
       } else {
         setErrors({ general: 'Respuesta inesperada del servidor' });
       }
 
     } catch (err) {
+      console.error('Error de login:', err);
       setErrors({ general: 'Fallo la conexión con el servidor' });
     } finally {
       setIsSubmitting(false);
     }
-  }, [formData, setIsAuthenticated, onLoginSuccess]);
+  }, [formData, navigate]);
 
   return (
     <Login

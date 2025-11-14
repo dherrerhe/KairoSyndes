@@ -57,24 +57,35 @@ export const workflowApi = {
   },
 
   /**
-   * Obtener lista de todos los workflows
-   * @returns {Promise<Array>} Lista de workflows
-   */
-  fetchAllWorkflows: async () => {
-    return await apiCall('/workflows/');
-  },
-
-  /**
-   * Crear un nuevo workflow
-   * @param {Object} workflowData - Datos del workflow
-   * @returns {Promise<Object>} Workflow creado
-   */
-  createWorkflow: async (workflowData) => {
-    return await apiCall('/workflows/', {
-      method: 'POST',
-      body: JSON.stringify(workflowData),
-    });
-  },
+  * Obtener lista de todos los workflows
+  * @returns {Promise<Array>} Lista de workflows
+  */
+ fetchAllWorkflows: async () => {
+   return await apiCall('/workflows/');
+ },
+ 
+ /**
+  * Crear un nuevo workflow
+  * @param {Object} workflowData - Datos del workflow
+  * @returns {Promise<Object>} Workflow creado
+  */
+ createWorkflow: async (workflowData) => {
+   return await apiCall('/workflows/', {
+     method: 'POST',
+     body: JSON.stringify(workflowData),
+   });
+ },
+ 
+ /**
+  * Eliminar un workflow
+  * @param {string|number} workflowId - ID del workflow
+  * @returns {Promise<null>}
+  */
+ deleteWorkflow: async (workflowId) => {
+   return await apiCall(`/workflows/${workflowId}/`, {
+     method: 'DELETE',
+   });
+ },
 
   /**
    * Actualizar un workflow completo (nodos + edges)
@@ -90,16 +101,6 @@ export const workflowApi = {
     });
   },
 
-  /**
-   * Eliminar un workflow
-   * @param {string|number} workflowId - ID del workflow
-   * @returns {Promise<null>}
-   */
-  deleteWorkflow: async (workflowId) => {
-    return await apiCall(`/workflows/${workflowId}/`, {
-      method: 'DELETE',
-    });
-  },
 
   // ============================================
   // NODES (Nodos)
