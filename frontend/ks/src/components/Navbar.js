@@ -1,45 +1,24 @@
-/**
- * @fileoverview Componente de navegación lateral (Sidebar) para KairoSyndes
- * @description Sidebar deslizable con overlay que contiene la navegación principal
- * de la aplicación, incluyendo enlaces a diferentes páginas y funcionalidad de cierre.
- * @author KairoSyndes
- * @version 1.0.0
- * @since 2024
- */
+// src/components/Navbar.js
+import { FaHome } from "react-icons/fa";
+import { TbTools } from "react-icons/tb";
+import { FaTimes } from "react-icons/fa";
+import { FaSignOutAlt } from "react-icons/fa"; // Nuevo icono
+import { Link, useNavigate } from "react-router-dom";
+import useAuth from '../hooks/useAuth';
 
-// Importaciones de iconos de React Icons
-import { FaHome } from "react-icons/fa";      // Icono de casa para Home
-import { TbTools } from "react-icons/tb";     // Icono de herramientas para Workspace
-import { FaTimes } from "react-icons/fa";     // Icono de X para cerrar
-
-// Importación de React Router para navegación
-import { Link } from "react-router-dom";
-
-/**
- * Componente de navegación lateral (Sidebar).
- * 
- * Este componente renderiza un sidebar deslizable que contiene:
- * - Un overlay semi-transparente para cerrar el sidebar
- * - Un header con el título "KairoSyndes" y botón de cierre
- * - Enlaces de navegación a las diferentes páginas de la aplicación
- * 
- * @component
- * @param {Object} props - Propiedades del componente
- * @param {boolean} props.show - Estado de visibilidad del sidebar
- * @param {Function} props.onClose - Función para cerrar el sidebar
- * @returns {JSX.Element} Elemento JSX del sidebar de navegación
- * 
- * @example
- * // Uso del componente Navbar
- * <Navbar show={isOpen} onClose={() => setIsOpen(false)} />
- */
 const Navbar = ({ show, onClose }) => {
+  const { logout, user } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    // Llama al logout para limpiar estado de autenticación y localStorage
+    await logout();
+    // Forza reload para limpiar cualquier caché o estado residual, permitiendo nuevo login fresco
+    navigate('/login', { replace: true });
+  };
+
   return (
     <>
-      {/* 
-        Overlay semi-transparente que aparece cuando el sidebar está abierto.
-        Permite cerrar el sidebar haciendo clic fuera de él.
-      */}
       <div 
         className={show ? 'sidenav-overlay active' : 'sidenav-overlay'}
         onClick={onClose}
@@ -49,18 +28,12 @@ const Navbar = ({ show, onClose }) => {
         aria-label="Cerrar menú de navegación"
       ></div>
       
-      {/* 
-        Sidebar principal con navegación.
-        Se desliza desde la izquierda cuando está activo.
-      */}
       <div className={show ? 'sidenav active' : 'sidenav'}>
-        {/* 
-          Header del sidebar que contiene:
-          - Título de la aplicación "KairoSyndes"
-          - Botón de cierre (X)
-        */}
         <div className="sidenav-header">
-          <h2 className="sidenav-title">KairoSyndes</h2>
+          <div>
+            <h2 className="sidenav-title">KairoSyndes</h2>
+            {user && <p style={{ fontSize: '12px', color: '#888', marginTop: '4px' }}>{user.email}</p>}
+          </div>
           <button 
             className="close-btn" 
             onClick={onClose}
@@ -71,10 +44,6 @@ const Navbar = ({ show, onClose }) => {
           </button>
         </div>
         
-        {/* 
-          Lista de navegación con enlaces a las diferentes páginas.
-          Cada enlace cierra automáticamente el sidebar al ser clickeado.
-        */}
         <ul role="navigation" aria-label="Menú principal">
           <li>
             <Link 
@@ -95,6 +64,26 @@ const Navbar = ({ show, onClose }) => {
               <TbTools />
               Workspace
             </Link>
+          </li>
+          <li style={{ marginTop: 'auto', borderTop: '1px solid #eee', paddingTop: '8px' }}>
+            <button 
+              onClick={handleLogout}
+              style={{
+                background: 'none',
+                border: 'none',
+                width: '100%',
+                textAlign: 'left',
+                padding: '12px 16px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                color: '#f44336'
+              }}
+            >
+              <FaSignOutAlt />
+              Cerrar Sesión
+            </button>
           </li>
         </ul>
       </div>

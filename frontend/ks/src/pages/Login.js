@@ -2,6 +2,8 @@
 import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Login from '../components/Login';
+// eslint-disable-next-line
+import useAuth from '../hooks/useAuth';
 
 const LoginPage = () => {
   const navigate = useNavigate();
