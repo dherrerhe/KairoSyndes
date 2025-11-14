@@ -60,38 +60,50 @@ export default function Home() {
     setShowModal(true);
   };
 
-  const createWorkflow = () => {
+  const createWorkflow = async () => {
     if (!name.trim()) {
       setError('El nombre es obligatorio.');
       return;
     }
-
-    const id = generateId();
-    const createdAt = new Date().toISOString();
+  
+    const tpl = TEMPLATES.find((t) => t.id === selectedTemplate) ?? TEMPLATES[0];
+  
+    // 1. Guardar en backend
+    const response = await fetch("http://127.0.0.1:8000/api/workflow/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: name.trim(),
+        data: {
+          nodes: tpl.nodes,
+          edges: tpl.edges,
+          exportedAt: new Date().toISOString()
+        }
+      })
+    });
+  
+    const saved = await response.json();
+  
+    // saved.workflow.id = ID que generó Django
+    const backendId = saved.workflow.id;
+  
+    // 2. Guardar metadatos en frontend (opcionalmente)
     const wf = {
-      id,
+      id: backendId,  // ← ID de Django
       name: name.trim(),
       creator,
-      createdAt,
-      templateId: selectedTemplate
+      createdAt: new Date().toISOString()
     };
-
+  
     const newArr = [wf, ...workflows];
     persist(newArr);
+  
     setShowModal(false);
-
-    // También guardamos la plantilla seleccionada (nodos/edges) asociada al workflow
-    // guardamos bajo la clave "workflow_data_<id>"
-    const tpl = TEMPLATES.find((t) => t.id === selectedTemplate) ?? TEMPLATES[0];
-    localStorage.setItem(`workflow_data_${id}`, JSON.stringify({ nodes: tpl.nodes, edges: tpl.edges }));
-
-    // navegar al workspace pasando workflowId por query
-    if (navigate) {
-      navigate(`/workspace?workflowId=${id}`);
-    } else {
-      window.location.href = `/workspace?workflowId=${id}`;
-    }
+  
+    // 3. Navegar al workspace usando el ID de Django
+    navigate(`/workspace?workflowId=${backendId}`);
   };
+  
 
   const openWorkflow = (wf) => {
     if (navigate) {

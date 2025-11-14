@@ -1,155 +1,303 @@
-/**
- * FlowComponent.jsx — versión corregida para persistencia y uso correcto de callbacks
- */
-// 
-
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ReactFlowProvider, addEdge, useNodesState, useEdgesState } from 'reactflow';
 import 'reactflow/dist/style.css';
 import FlowSidebar from './FlowSidebar';
 import FlowToolbar from './FlowToolbar';
 import FlowCanvas from './FlowCanvas';
-
 import CustomNode from './CustomNode';
 import EdgeEditorPanel from './EdgeEditorPanel';
 import { useLocation } from 'react-router-dom';
-import { getId, saveWorkflowToLocalStorage, loadWorkflowFromLocalStorage, limpiarDatosNodoParaSerializar } from './flowUtils';
+import { getId } from './flowUtils';
+
 const nodeTypes = { custom: CustomNode };
 
+// Nodos iniciales de respaldo (si no hay workflow)
 const initialNodes = [
   { id: '1', type: 'custom', position: { x: 250, y: 5 }, data: { name: 'Nodo A', time: '2h', inCharge: 'Usuario 1' } },
-  { id: '2', type: 'custom', position: { x: 100, y: 150 }, data: { name: 'Nodo B', time: '1.5h', inCharge: 'Usuario 2' } },
-  { id: '3', position: { x: 400, y: 150 }, data: { label: 'Nodo C (normal)' } }
 ];
+const initialEdges = [];
 
-const initialEdges = [{ id: 'e1-2', source: '1', target: '2', label: 'dependencia' }];
+// ============================================
+// API Functions - Comunicación con Django
+// ============================================
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
 
+const apiCall = async (endpoint, options = {}) => {
+  const token = localStorage.getItem('auth_token'); // Si usas autenticación
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(token && { 'Authorization': `Bearer ${token}` }),
+    ...options.headers,
+  };
+
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    ...options,
+    headers,
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || errorData.error || `Error ${response.status}`);
+  }
+
+  return response.json();
+};
+
+// Cargar workflow completo desde el backend
+const fetchWorkflow = async (workflowId) => {
+  return await apiCall(`/workflows/${workflowId}/`);
+};
+
+// Cargar nodos de un workflow
+const fetchNodes = async (workflowId) => {
+  return await apiCall(`/workflows/${workflowId}/nodes/`);
+};
+
+// Cargar edges de un workflow
+const fetchEdges = async (workflowId) => {
+  return await apiCall(`/workflows/${workflowId}/edges/`);
+};
+
+// Guardar workflow completo
+const saveWorkflow = async (workflowId, nodes, edges) => {
+  return await apiCall(`/workflows/${workflowId}/`, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      nodes: nodes,
+      edges: edges,
+    }),
+  });
+};
+
+// Crear un nodo nuevo
+const createNode = async (workflowId, nodeData) => {
+  return await apiCall(`/workflows/${workflowId}/nodes/`, {
+    method: 'POST',
+    body: JSON.stringify(nodeData),
+  });
+};
+
+// Actualizar un nodo existente
+const updateNode = async (workflowId, nodeId, nodeData) => {
+  return await apiCall(`/workflows/${workflowId}/nodes/${nodeId}/`, {
+    method: 'PATCH',
+    body: JSON.stringify(nodeData),
+  });
+};
+
+// Eliminar un nodo
+const deleteNode = async (workflowId, nodeId) => {
+  return await apiCall(`/workflows/${workflowId}/nodes/${nodeId}/`, {
+    method: 'DELETE',
+  });
+};
+
+// ============================================
+// Componente Principal
+// ============================================
 export default function FlowComponent() {
   const reactFlowWrapper = useRef(null);
   const reactFlowInstance = useRef(null);
 
-  // Obtener workflowId desde querystring (si aplica)
+  // Obtener workflowId desde querystring
   const location = useLocation();
-  const params = location ? new URLSearchParams(location.search) : new URLSearchParams(window.location.search);
+  const params = new URLSearchParams(location.search);
   const workflowId = params.get('workflowId');
 
   const [feedback, setFeedback] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
 
-  // Cargar plantilla guardada (si existe)
-  const loadTemplateFromStorage = useCallback(() => {
-    if (!workflowId) return null;
-    try {
-      const raw = localStorage.getItem(`workflow_data_${workflowId}`);
-      if (!raw) return null;
-      return JSON.parse(raw); // { nodes, edges, savedAt }
-    } catch (err) {
-      console.warn('No se pudo cargar plantilla del workflow:', err);
-      return null;
-    }
-  }, [workflowId]);
+  // Estados de ReactFlow
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
-  const tpl = loadTemplateFromStorage();
-  const nodesInit = tpl?.nodes?.length ? tpl.nodes : initialNodes;
-  const edgesInit = tpl?.edges?.length ? tpl.edges : initialEdges;
-
-  // Inicializar estados sin intentar inyectar callbacks (se inyectará después en useEffect)
-  const [nodes, setNodes, onNodesChange] = useNodesState(nodesInit);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(edgesInit);
-
-  // Formulario lateral
-  const [newLabel, setNewLabel] = useState('Nuevo nodo');
-  const [newTime, setNewTime] = useState('');
-  const [newInCharge, setNewInCharge] = useState('');
-  const [newType, setNewType] = useState('custom');
-
-  // Edges selection
+  // Estados de UI
   const [selectedEdgeId, setSelectedEdgeId] = useState(null);
-
-  // Menu contextual
-  const [isMenuExpanded, setIsMenuExpanded] = useState(false);
   const [selectedNode, setSelectedNode] = useState(null);
   const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
   const [isContextMenuVisible, setIsContextMenuVisible] = useState(false);
   const [editingNodeData, setEditingNodeData] = useState({ name: '', time: '', inCharge: '', ip: '' });
-
-// Función para obtener la IP real del usuario
-const getUserIP = useCallback(async () => {
-  try {
-    const response = await fetch('https://api.ipify.org?format=json');
-    const data = await response.json();
-    return data.ip;
-  } catch (error) {
-    console.warn('No se pudo obtener la IP del usuario:', error);
-    return 'IP no disponible';
-  }
-}, []);
-
-// --- Handler para agregar un nodo desde el sidebar
-const handleAddNode = useCallback(async ({ name, time, inCharge }) => {
-  const userIP = await getUserIP();
-  setNodes((existingNodes) => [
-    ...existingNodes,
-    {
-      id: getId(),
-      type: 'custom',
-      position: { x: 120 + Math.random() * 200, y: 120 + Math.random() * 80 },
-      data: { name, time, inCharge, ip: userIP }
-    }
-  ]);
-}, [setNodes, getUserIP]);
-
-// --- Handler para resetear flujo
-const handleResetFlow = useCallback(() => {
-  setNodes(initialNodes);
-  setEdges(initialEdges);
-  setFeedback('Flujo reseteado.');
-  setTimeout(() => setFeedback(''), 1700);
-}, [setNodes, setEdges]);
-
-  // Dragging context menu
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
-  // -------------------------
-  // handleChangeLabel (declaro acá; usa setNodes que ya existe)
-  // -------------------------
+  // ============================================
+  // Cargar datos desde el backend al montar
+  // ============================================
+  useEffect(() => {
+    const loadWorkflowData = async () => {
+      if (!workflowId) {
+        setFeedback('No hay workflowId. Usando flujo inicial.');
+        setNodes(initialNodes);
+        setEdges(initialEdges);
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+      setLoadError(null);
+
+      try {
+        // Cargar nodos y edges del backend
+        const [nodesData, edgesData] = await Promise.all([
+          fetchNodes(workflowId),
+          fetchEdges(workflowId),
+        ]);
+
+        // Transformar nodos del backend al formato de ReactFlow
+        const transformedNodes = nodesData.map((node) => ({
+          id: node.id.toString(),
+          type: node.node_type === 'custom' ? 'custom' : undefined,
+          position: node.position || { x: 100, y: 100 },
+          data: {
+            name: node.data?.name || node.name || 'Sin nombre',
+            time: node.data?.time || '',
+            inCharge: node.data?.inCharge || '',
+            ip: node.data?.ip || '',
+            // Se inyectará onChangeLabel después
+          },
+        }));
+
+        // Transformar edges del backend al formato de ReactFlow
+        const transformedEdges = edgesData.map((edge) => ({
+          id: edge.id.toString(),
+          source: edge.source_node.toString(),
+          target: edge.target_node.toString(),
+          label: edge.label || edge.condition_type || '',
+          type: edge.edge_type || 'default',
+          animated: edge.animated || false,
+          style: edge.style || {},
+        }));
+
+        setNodes(transformedNodes);
+        setEdges(transformedEdges);
+        setFeedback('Workflow cargado correctamente.');
+        setTimeout(() => setFeedback(''), 2000);
+      } catch (error) {
+        console.error('Error cargando workflow:', error);
+        setLoadError(error.message);
+        setFeedback(`Error: ${error.message}`);
+        // Usar datos iniciales como respaldo
+        setNodes(initialNodes);
+        setEdges(initialEdges);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadWorkflowData();
+  }, [workflowId]); // Se ejecuta cuando cambia el workflowId
+
+  // ============================================
+  // Función para obtener IP del usuario
+  // ============================================
+  const getUserIP = useCallback(async () => {
+    try {
+      const response = await fetch('https://api.ipify.org?format=json');
+      const data = await response.json();
+      return data.ip;
+    } catch (error) {
+      console.warn('No se pudo obtener la IP del usuario:', error);
+      return 'IP no disponible';
+    }
+  }, []);
+
+  // ============================================
+  // Handler para cambiar etiquetas (inline edit)
+  // ============================================
   const handleChangeLabel = useCallback((nodeId, newData) => {
     setNodes((nds) =>
       nds.map((n) =>
-        n.id === nodeId ? { ...n, data: { ...n.data, ...newData, onChangeLabel: handleChangeLabel } } : n
+        n.id === nodeId 
+          ? { ...n, data: { ...n.data, ...newData, onChangeLabel: handleChangeLabel } } 
+          : n
       )
     );
   }, [setNodes]);
 
-  // Inyectar onChangeLabel en nodos custom al montar / cuando cambien nodesInit
+  // Inyectar onChangeLabel en todos los nodos custom
   useEffect(() => {
     setNodes((nds) =>
       nds.map((n) =>
-        n.type === 'custom' ? { ...n, data: { ...n.data, onChangeLabel: handleChangeLabel } } : n
+        n.type === 'custom' 
+          ? { ...n, data: { ...n.data, onChangeLabel: handleChangeLabel } } 
+          : n
       )
     );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // se ejecuta una vez al montar
+  }, [handleChangeLabel, setNodes]);
 
-  // -------------------------
-  // Handlers básicos
-  // -------------------------
-  const onConnect = useCallback((params) => setEdges((eds) => addEdge(params, eds)), [setEdges]);
+  // ============================================
+  // Handler para agregar nodo (desde sidebar)
+  // ============================================
+  const handleAddNode = useCallback(async ({ name, time, inCharge }) => {
+    if (!workflowId) {
+      setFeedback('No hay workflowId activo.');
+      return;
+    }
 
-  // Esta función depende de variables como newLabel, newTime, newInCharge, newType, pero NO están definidas en el código mostrado.
-  // Eso significa que createNodeCentered no funcionará correctamente si esas variables no existen como estados o props.
-  // Además, tampoco expone ni usa createNodeCentered en ningún sitio, así que falta conectarla (por ejemplo, a un botón o menú).
-  // Ejemplo mínimo de lo que le falta:
+    try {
+      const userIP = await getUserIP();
+      const tempId = getId(); // ID temporal
 
-  // 1. Deben existir los estados:
-  // const [newLabel, setNewLabel] = useState('');
-  // const [newTime, setNewTime] = useState('');
-  // const [newInCharge, setNewInCharge] = useState('');
-  // const [newType, setNewType] = useState('custom');
-  // ...o debes obtener esos valores de otro input.
-  // 2. Debes invocar createNodeCentered desde algún UI (botón, menú, etc).
+      // Agregar nodo localmente primero (optimistic update)
+      const newNode = {
+        id: tempId,
+        type: 'custom',
+        position: { x: 120 + Math.random() * 200, y: 120 + Math.random() * 80 },
+        data: { name, time, inCharge, ip: userIP, onChangeLabel: handleChangeLabel }
+      };
 
-  // Si quieres solo mostrar el esqueleto correcto:
+      setNodes((existingNodes) => [...existingNodes, newNode]);
+
+      // Guardar en el backend
+      const savedNode = await createNode(workflowId, {
+        workflow: parseInt(workflowId),
+        node_type: 'custom',
+        name: name,
+        position: newNode.position,
+        data: { name, time, inCharge, ip: userIP }
+      });
+
+      // Actualizar con el ID real del backend
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === tempId 
+            ? { ...n, id: savedNode.id.toString() } 
+            : n
+        )
+      );
+
+      setFeedback('Nodo creado correctamente.');
+      setTimeout(() => setFeedback(''), 2000);
+    } catch (error) {
+      console.error('Error creando nodo:', error);
+      setFeedback(`Error: ${error.message}`);
+    }
+  }, [workflowId, setNodes, getUserIP, handleChangeLabel]);
+
+  // ============================================
+  // Handler para resetear flujo
+  // ============================================
+  const handleResetFlow = useCallback(() => {
+    setNodes(initialNodes);
+    setEdges(initialEdges);
+    setFeedback('Flujo reseteado (solo local).');
+    setTimeout(() => setFeedback(''), 1700);
+  }, [setNodes, setEdges]);
+
+  // ============================================
+  // Handlers de ReactFlow
+  // ============================================
+  const onConnect = useCallback((params) => {
+    setEdges((eds) => addEdge(params, eds));
+    
+    // TODO: Guardar edge en el backend
+    if (workflowId) {
+      // Implementar createEdge similar a createNode
+      console.log('TODO: Guardar edge en backend', params);
+    }
+  }, [setEdges, workflowId]);
+
   const createNodeCentered = useCallback(
     async (label, time = '', inCharge = '', type = 'custom') => {
       const userIP = await getUserIP();
@@ -164,21 +312,37 @@ const handleResetFlow = useCallback(() => {
         });
       }
 
+      const tempId = getId();
       const newNode = {
-        id: getId(),
+        id: tempId,
         type: type === 'custom' ? 'custom' : undefined,
         position,
-        data:
-          type === 'custom'
-            ? { name: label, time, inCharge, ip: userIP, onChangeLabel: handleChangeLabel }
-            : { label }
+        data: type === 'custom'
+          ? { name: label, time, inCharge, ip: userIP, onChangeLabel: handleChangeLabel }
+          : { label }
       };
 
       setNodes((nds) => nds.concat(newNode));
-    },
-    [handleChangeLabel, setNodes, getUserIP]
-  );
 
+      // Guardar en backend si hay workflowId
+      if (workflowId) {
+        try {
+          const savedNode = await createNode(workflowId, {
+            workflow: parseInt(workflowId),
+            node_type: type,
+            name: label,
+            position: position,
+            data: type === 'custom' ? { name: label, time, inCharge, ip: userIP } : { label }
+          });
+
+          setNodes((nds) => nds.map((n) => n.id === tempId ? { ...n, id: savedNode.id.toString() } : n));
+        } catch (error) {
+          console.error('Error guardando nodo centrado:', error);
+        }
+      }
+    },
+    [handleChangeLabel, setNodes, getUserIP, workflowId]
+  );
 
   const onNodeClick = useCallback((event, node) => {
     event.stopPropagation();
@@ -187,7 +351,12 @@ const handleResetFlow = useCallback(() => {
       setContextMenuPosition({ x: event.clientX - rect.left, y: event.clientY - rect.top });
     }
     setSelectedNode(node);
-    setEditingNodeData({ name: node.data.name || '', time: node.data.time || '', inCharge: node.data.inCharge || '', ip: node.data.ip || '' });
+    setEditingNodeData({ 
+      name: node.data.name || '', 
+      time: node.data.time || '', 
+      inCharge: node.data.inCharge || '', 
+      ip: node.data.ip || '' 
+    });
     setIsContextMenuVisible(true);
   }, []);
 
@@ -197,29 +366,135 @@ const handleResetFlow = useCallback(() => {
     setIsDragging(false);
   }, []);
 
-  const handleDragStart = useCallback((event) => {
-    event.preventDefault();
-    setIsDragging(true);
-    const rect = reactFlowWrapper.current?.getBoundingClientRect();
-    if (rect) {
-      setDragOffset({ x: event.clientX - rect.left - contextMenuPosition.x, y: event.clientY - rect.top - contextMenuPosition.y });
+  // ============================================
+  // Actualizar nodo desde menú contextual
+  // ============================================
+  const updateNodeData = useCallback(async () => {
+    if (!selectedNode || !workflowId) return;
+
+    try {
+      const userIP = await getUserIP();
+      
+      // Actualizar localmente
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === selectedNode.id
+            ? {
+                ...n,
+                data: {
+                  ...n.data,
+                  name: editingNodeData.name,
+                  time: editingNodeData.time,
+                  inCharge: editingNodeData.inCharge,
+                  ip: userIP,
+                  onChangeLabel: handleChangeLabel
+                }
+              }
+            : n
+        )
+      );
+
+      // Actualizar en el backend
+      await updateNode(workflowId, selectedNode.id, {
+        name: editingNodeData.name,
+        data: {
+          name: editingNodeData.name,
+          time: editingNodeData.time,
+          inCharge: editingNodeData.inCharge,
+          ip: userIP
+        }
+      });
+
+      setFeedback('Nodo actualizado correctamente.');
+      setTimeout(() => setFeedback(''), 2000);
+      closeContextMenu();
+    } catch (error) {
+      console.error('Error actualizando nodo:', error);
+      setFeedback(`Error: ${error.message}`);
     }
-  }, [contextMenuPosition]);
+  }, [selectedNode, editingNodeData, setNodes, handleChangeLabel, closeContextMenu, getUserIP, workflowId]);
 
-  const handleDragMove = useCallback((event) => {
-    if (!isDragging) return;
-    const rect = reactFlowWrapper.current?.getBoundingClientRect();
-    if (rect) {
-      const newX = event.clientX - rect.left - dragOffset.x;
-      const newY = event.clientY - rect.top - dragOffset.y;
-      const maxX = rect.width - 300;
-      const maxY = rect.height - 200;
-      setContextMenuPosition({ x: Math.max(0, Math.min(newX, maxX)), y: Math.max(0, Math.min(newY, maxY)) });
+  // ============================================
+  // Guardar workflow completo
+  // ============================================
+  const saveWorkflowToBackend = useCallback(async () => {
+    if (!workflowId) {
+      setFeedback('No hay workflowId definido.');
+      return;
     }
-  }, [isDragging, dragOffset]);
 
-  const handleDragEnd = useCallback(() => setIsDragging(false), []);
+    try {
+      const instanceNodes = reactFlowInstance?.current?.getNodes?.() ?? nodes;
 
+      // Preparar nodos para enviar al backend
+      const nodesForSave = instanceNodes.map((n) => ({
+        id: parseInt(n.id),
+        node_type: n.type || 'default',
+        position: n.position,
+        data: {
+          name: n.data.name,
+          time: n.data.time,
+          inCharge: n.data.inCharge,
+          ip: n.data.ip
+        }
+      }));
+
+      // Preparar edges para enviar al backend
+      const edgesForSave = edges.map((e) => ({
+        id: parseInt(e.id),
+        source_node: parseInt(e.source),
+        target_node: parseInt(e.target),
+        label: e.label,
+        edge_type: e.type || 'default',
+        animated: e.animated || false,
+        style: e.style || {}
+      }));
+
+      await saveWorkflow(workflowId, nodesForSave, edgesForSave);
+
+      setFeedback('Workflow guardado en el servidor.');
+      setTimeout(() => setFeedback(''), 2200);
+    } catch (error) {
+      console.error('Error guardando workflow:', error);
+      setFeedback(`Error: ${error.message}`);
+    }
+  }, [workflowId, nodes, edges]);
+
+  // ============================================
+  // Toolbar handlers
+  // ============================================
+  const handleZoomIn = useCallback(() => {
+    reactFlowInstance.current?.zoomIn?.({ duration: 200 });
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    reactFlowInstance.current?.zoomOut?.({ duration: 200 });
+  }, []);
+
+  const handleFitView = useCallback(() => {
+    reactFlowInstance.current?.fitView?.({ padding: 0.2, duration: 200 });
+  }, []);
+
+  const handleExport = useCallback(() => {
+    try {
+      const instanceNodes = reactFlowInstance?.current?.getNodes?.() ?? nodes;
+      const payload = { nodes: instanceNodes, edges, exportedAt: new Date().toISOString() };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `workflow_${workflowId || 'sin_id'}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setFeedback('Workflow exportado.');
+      setTimeout(() => setFeedback(''), 2200);
+    } catch (err) {
+      console.error('Error exportando:', err);
+      setFeedback('Error al exportar.');
+    }
+  }, [nodes, edges, workflowId]);
+
+  // Otros handlers
   const onDragOver = useCallback((event) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
@@ -232,75 +507,52 @@ const handleResetFlow = useCallback(() => {
 
   const saveEdgeLabel = useCallback((edgeId, newLabel) => {
     setEdges((eds) => eds.map((e) => (e.id === edgeId ? { ...e, label: newLabel } : e)));
+    // TODO: Actualizar edge en backend
   }, [setEdges]);
 
   const deleteEdge = useCallback((edgeId) => {
     setEdges((eds) => eds.filter((e) => e.id !== edgeId));
     setSelectedEdgeId(null);
+    // TODO: Eliminar edge del backend
   }, [setEdges]);
 
   const selectedEdge = edges.find((e) => e.id === selectedEdgeId) ?? null;
 
-  // -------------------------
-  // Persistencia: guardar en localStorage (sanitizando)
-  // -------------------------
-  const saveWorkflowToStorage = useCallback(() => {
-    if (!workflowId) {
-      setFeedback('No hay workflowId definido. Abre o crea un workflow primero.');
-      return;
-    }
-    try {
-      const instanceNodes = reactFlowInstance?.current?.getNodes?.() ?? nodes;
+  const onInit = useCallback((instance) => {
+    reactFlowInstance.current = instance;
+  }, []);
 
-      const nodesForSave = instanceNodes.map((n) => {
-        const safeData = { ...n.data };
-        if (safeData.onChangeLabel) delete safeData.onChangeLabel;
-        // borrar otras props no serializables si las hubiese
-        return { id: n.id, type: n.type, position: n.position, data: safeData };
+  // Handlers de drag para menú contextual
+  const handleDragStart = useCallback((event) => {
+    event.preventDefault();
+    setIsDragging(true);
+    const rect = reactFlowWrapper.current?.getBoundingClientRect();
+    if (rect) {
+      setDragOffset({ 
+        x: event.clientX - rect.left - contextMenuPosition.x, 
+        y: event.clientY - rect.top - contextMenuPosition.y 
       });
+    }
+  }, [contextMenuPosition]);
 
-      const edgesForSave = edges.map((e) => {
-        const { id, source, target, label, type, animated, style } = e;
-        return { id, source, target, label, type, animated, style };
+  const handleDragMove = useCallback((event) => {
+    if (!isDragging) return;
+    const rect = reactFlowWrapper.current?.getBoundingClientRect();
+    if (rect) {
+      const newX = event.clientX - rect.left - dragOffset.x;
+      const newY = event.clientY - rect.top - dragOffset.y;
+      const maxX = rect.width - 300;
+      const maxY = rect.height - 200;
+      setContextMenuPosition({ 
+        x: Math.max(0, Math.min(newX, maxX)), 
+        y: Math.max(0, Math.min(newY, maxY)) 
       });
-
-      const payload = { nodes: nodesForSave, edges: edgesForSave, savedAt: new Date().toISOString() };
-      localStorage.setItem(`workflow_data_${workflowId}`, JSON.stringify(payload));
-
-      setFeedback('Workflow guardado correctamente.');
-      setTimeout(() => setFeedback(''), 2200);
-    } catch (err) {
-      console.error('Error guardando workflow:', err);
-      setFeedback('Error al guardar el workflow.');
     }
-  }, [workflowId, nodes, edges]);
+  }, [isDragging, dragOffset]);
 
-  // Actualizar nodo desde menú contextual
-  const updateNodeData = useCallback(async () => {
-    if (selectedNode) {
-      const userIP = await getUserIP();
-      setNodes((nds) =>
-        nds.map((n) =>
-          n.id === selectedNode.id
-            ? {
-                ...n,
-                data: {
-                  ...n.data,
-                  name: editingNodeData.name,
-                  time: editingNodeData.time,
-                  inCharge: editingNodeData.inCharge,
-                  ip: userIP, // Actualizar con la IP del usuario que modifica
-                  onChangeLabel: handleChangeLabel
-                }
-              }
-            : n
-        )
-      );
-      closeContextMenu();
-    }
-  }, [selectedNode, editingNodeData, setNodes, handleChangeLabel, closeContextMenu, getUserIP]);
+  const handleDragEnd = useCallback(() => setIsDragging(false), []);
 
-  // Listeners para cerrar y drag del contexto
+  // Effects para menú contextual
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (isContextMenuVisible && !event.target.closest('.node-context-menu')) {
@@ -322,68 +574,28 @@ const handleResetFlow = useCallback(() => {
     };
   }, [isDragging, handleDragMove, handleDragEnd]);
 
-  // -------------------------
-  // onInit para capturar instancia
-  // -------------------------
-  const onInit = useCallback((instance) => {
-    reactFlowInstance.current = instance;
-  }, []);
-
-  // -------------------------
-  // Toolbar handlers: zoom, fit, save, export
-  // -------------------------
-  const handleZoomIn = useCallback(() => {
-    if (reactFlowInstance.current?.zoomIn) {
-      reactFlowInstance.current.zoomIn({ duration: 200 });
-    }
-  }, []);
-
-  const handleZoomOut = useCallback(() => {
-    if (reactFlowInstance.current?.zoomOut) {
-      reactFlowInstance.current.zoomOut({ duration: 200 });
-    }
-  }, []);
-
-  const handleFitView = useCallback(() => {
-    if (reactFlowInstance.current?.fitView) {
-      reactFlowInstance.current.fitView({ padding: 0.2, duration: 200 });
-    }
-  }, []);
-
-  const handleExport = useCallback(() => {
-    try {
-      const instanceNodes = reactFlowInstance?.current?.getNodes?.() ?? nodes;
-
-      const nodesForExport = instanceNodes.map((n) => {
-        const safeData = { ...n.data };
-        if (safeData.onChangeLabel) delete safeData.onChangeLabel;
-        return { id: n.id, type: n.type, position: n.position, data: safeData };
-      });
-
-      const edgesForExport = edges.map((e) => {
-        const { id, source, target, label, type, animated, style } = e;
-        return { id, source, target, label, type, animated, style };
-      });
-
-      const payload = { nodes: nodesForExport, edges: edgesForExport, exportedAt: new Date().toISOString() };
-      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `workflow_${workflowId || 'sin_id'}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-      setFeedback('Workflow exportado.');
-      setTimeout(() => setFeedback(''), 2200);
-    } catch (err) {
-      console.error('Error exportando workflow:', err);
-      setFeedback('Error al exportar el workflow.');
-    }
-  }, [nodes, edges, workflowId]);
-
-  // -------------------------
+  // ============================================
   // Render
-  // -------------------------
+  // ============================================
+  if (isLoading) {
+    return (
+      <div className="flow-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <div>Cargando workflow...</div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="flow-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <div style={{ textAlign: 'center' }}>
+          <h3>Error al cargar workflow</h3>
+          <p>{loadError}</p>
+          <button onClick={() => window.location.reload()}>Reintentar</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flow-container" style={{ display: 'flex', gap: 8 }}>
@@ -391,9 +603,9 @@ const handleResetFlow = useCallback(() => {
         <hr className="flow-separator" />
         <h4 className="flow-tips-title">Tips</h4>
         <ul className="flow-tips-list">
-          <li>Arrastra nodos para reposicionarlos en el canvas</li>
-          <li>Conecta nodos arrastrando desde un handle a otro</li>
-          <li>Selecciona una arista para editar su etiqueta o eliminarla</li>
+          <li>Arrastra nodos para reposicionarlos</li>
+          <li>Conecta nodos arrastrando desde un handle</li>
+          <li>Selecciona una arista para editarla</li>
         </ul>
         {selectedEdge ? (
           <div className="edge-editor-region">
@@ -406,17 +618,18 @@ const handleResetFlow = useCallback(() => {
             />
           </div>
         ) : (
-          <div className="edge-editor-placeholder">Selecciona una arista en el canvas para editarla</div>
+          <div className="edge-editor-placeholder">
+            Selecciona una arista para editarla
+          </div>
         )}
       </FlowSidebar>
 
-      {/* Reemplazado ReactFlow por FlowCanvas aquí para no repetir lógica ya modularizada */}
       <div ref={reactFlowWrapper} className="flow-canvas-container" style={{ flex: 1, position: 'relative' }}>
         <FlowToolbar
           onZoomIn={handleZoomIn}
           onZoomOut={handleZoomOut}
           onFitView={handleFitView}
-          onSave={saveWorkflowToStorage}
+          onSave={saveWorkflowToBackend}
           onExport={handleExport}
           extraActions={() => (
             <button
@@ -430,7 +643,22 @@ const handleResetFlow = useCallback(() => {
           )}
           style={{ position: 'absolute', top: 8, left: 8, zIndex: 5, background: 'transparent', padding: 0 }}
         />
-        {feedback && <div style={{ marginTop: 8 }} className="feedback">{feedback}</div>}
+        
+        {feedback && (
+          <div style={{ 
+            position: 'absolute', 
+            top: 60, 
+            left: 8, 
+            zIndex: 5, 
+            padding: '8px 12px', 
+            background: '#4CAF50', 
+            color: 'white', 
+            borderRadius: 4 
+          }}>
+            {feedback}
+          </div>
+        )}
+
         <FlowCanvas
           nodes={nodes}
           edges={edges}
@@ -445,8 +673,19 @@ const handleResetFlow = useCallback(() => {
         />
 
         {isContextMenuVisible && (
-          <div className="node-context-menu" style={{ position: 'absolute', left: contextMenuPosition.x + 10, top: contextMenuPosition.y - 10, zIndex: 1000 }}>
-            <div className={`context-menu-header ${isDragging ? 'dragging' : ''}`} onMouseDown={handleDragStart}>
+          <div 
+            className="node-context-menu" 
+            style={{ 
+              position: 'absolute', 
+              left: contextMenuPosition.x + 10, 
+              top: contextMenuPosition.y - 10, 
+              zIndex: 1000 
+            }}
+          >
+            <div 
+              className={`context-menu-header ${isDragging ? 'dragging' : ''}`} 
+              onMouseDown={handleDragStart}
+            >
               <h4>Editar Nodo</h4>
               <button className="context-menu-close" onClick={closeContextMenu}>×</button>
             </div>
@@ -454,31 +693,53 @@ const handleResetFlow = useCallback(() => {
             <div className="context-menu-content">
               <label className="context-menu-label">
                 Nombre:
-                <input type="text" value={editingNodeData.name} onChange={(e) => setEditingNodeData(prev => ({ ...prev, name: e.target.value }))} className="context-menu-input" />
+                <input 
+                  type="text" 
+                  value={editingNodeData.name} 
+                  onChange={(e) => setEditingNodeData(prev => ({ ...prev, name: e.target.value }))} 
+                  className="context-menu-input" 
+                />
               </label>
 
               <label className="context-menu-label">
                 Tiempo:
-                <input type="text" value={editingNodeData.time} onChange={(e) => setEditingNodeData(prev => ({ ...prev, time: e.target.value }))} className="context-menu-input" placeholder="ej: 2h, 30min" />
+                <input 
+                  type="text" 
+                  value={editingNodeData.time} 
+                  onChange={(e) => setEditingNodeData(prev => ({ ...prev, time: e.target.value }))} 
+                  className="context-menu-input" 
+                  placeholder="ej: 2h, 30min" 
+                />
               </label>
 
               <label className="context-menu-label">
                 Encargado:
-                <input type="text" value={editingNodeData.inCharge} onChange={(e) => setEditingNodeData(prev => ({ ...prev, inCharge: e.target.value }))} className="context-menu-input" placeholder="Nombre del responsable" />
+                <input 
+                  type="text" 
+                  value={editingNodeData.inCharge} 
+                  onChange={(e) => setEditingNodeData(prev => ({ ...prev, inCharge: e.target.value }))} 
+                  className="context-menu-input" 
+                  placeholder="Nombre del responsable" 
+                />
               </label>
             </div>
 
-            {/* Información de solo lectura - IP */}
             <div className="context-menu-readonly">
               <div className="context-menu-label">
                 Último modificador:
-                <div className="context-menu-ip-display">{editingNodeData.ip || 'Sin IP'}</div>
+                <div className="context-menu-ip-display">
+                  {editingNodeData.ip || 'Sin IP'}
+                </div>
               </div>
             </div>
 
             <div className="context-menu-actions">
-              <button className="context-menu-save" onClick={updateNodeData}>Guardar</button>
-              <button className="context-menu-cancel" onClick={closeContextMenu}>Cancelar</button>
+              <button className="context-menu-save" onClick={updateNodeData}>
+                Guardar
+              </button>
+              <button className="context-menu-cancel" onClick={closeContextMenu}>
+                Cancelar
+              </button>
             </div>
           </div>
         )}
