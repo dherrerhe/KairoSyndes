@@ -80,7 +80,7 @@ export default function FlowComponent() {
   const [selectedNode, setSelectedNode] = useState(null);
   const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
   const [isContextMenuVisible, setIsContextMenuVisible] = useState(false);
-  const [editingNodeData, setEditingNodeData] = useState({ name: '', time: '', inCharge: '', ip: '', progress: 0 });
+  const [editingNodeData, setEditingNodeData] = useState({ name: '', time: '', inCharge: '', description: '', ip: '', progress: 0 });
 
   // Comentarios
   const [commentNodeId, setCommentNodeId] = useState(null);
@@ -184,7 +184,7 @@ export default function FlowComponent() {
 
   // --- Handler para agregar un nodo desde el sidebar
   const handleAddNode = useCallback(
-    async ({ name, time, inCharge, type = 'custom' }) => {
+    async ({ name, time, inCharge, description, type = 'custom' }) => {
       const userIP = await getUserIP();
       const position = { x: 120 + Math.random() * 200, y: 120 + Math.random() * 80 };
 
@@ -198,6 +198,7 @@ export default function FlowComponent() {
                 name,
                 time,
                 inCharge,
+                description,
                 ip: userIP,
                 progress: 0,
                 comments: [],
@@ -278,7 +279,7 @@ export default function FlowComponent() {
 
   // Si quieres solo mostrar el esqueleto correcto:
   const createNodeCentered = useCallback(
-    async (label, time = '', inCharge = '', type = 'custom') => {
+    async (label, time = '', inCharge = '', description = '', type = 'custom') => {
       const userIP = await getUserIP();
       const bounds = reactFlowWrapper.current?.getBoundingClientRect();
       let position = { x: 250, y: 150 };
@@ -301,6 +302,7 @@ export default function FlowComponent() {
                 name: label,
                 time,
                 inCharge,
+                description,
                 ip: userIP,
                 progress: 0,
                 comments: [],
@@ -327,6 +329,7 @@ export default function FlowComponent() {
       name: node.data.name || '', 
       time: node.data.time || '', 
       inCharge: node.data.inCharge || '', 
+      description: node.data.description || '',
       ip: node.data.ip || '',
       progress: node.data.progress !== undefined ? node.data.progress : 0
     });
@@ -432,6 +435,7 @@ export default function FlowComponent() {
                   name: editingNodeData.name,
                   time: editingNodeData.time,
                   inCharge: editingNodeData.inCharge,
+                  description: editingNodeData.description,
                   progress: editingNodeData.progress !== undefined ? Math.max(0, Math.min(100, Number(editingNodeData.progress) || 0)) : 0,
                   ip: userIP, // Actualizar con la IP del usuario que modifica
                   comments: Array.isArray(n.data?.comments) ? n.data.comments : [],
@@ -577,7 +581,7 @@ export default function FlowComponent() {
               type="button"
               className="toolbar-btn"
               title="Añadir nodo centrado"
-              onClick={() => createNodeCentered('Nuevo nodo', '', '', 'custom')}
+              onClick={() => createNodeCentered('Nuevo nodo', '', '', '', 'custom')}
             >
               (+) Nodo centrado
             </button>
@@ -619,6 +623,17 @@ export default function FlowComponent() {
               <label className="context-menu-label">
                 Encargado:
                 <input type="text" value={editingNodeData.inCharge} onChange={(e) => setEditingNodeData(prev => ({ ...prev, inCharge: e.target.value }))} className="context-menu-input" placeholder="Nombre del responsable" />
+              </label>
+
+              <label className="context-menu-label">
+                Descripción del trabajo:
+                <textarea 
+                  value={editingNodeData.description} 
+                  onChange={(e) => setEditingNodeData(prev => ({ ...prev, description: e.target.value }))} 
+                  className="context-menu-input" 
+                  placeholder="Describe el trabajo que se va a realizar..."
+                  rows={4}
+                />
               </label>
 
               <label className="context-menu-label">

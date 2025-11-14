@@ -1,11 +1,33 @@
 .flow-sidebar {
   padding: 16px;
   border-right: 1px solid #ccc;
-  width: 260px;
   background: #fafbfc;
   height: 100%;
   box-sizing: border-box;
   overflow-y: auto;
+  position: relative;
+  flex-shrink: 0;
+}
+
+/* Handle de redimensionamiento */
+.fs-resize-handle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 4px;
+  height: 100%;
+  background: transparent;
+  cursor: col-resize;
+  z-index: 10;
+  transition: background-color 0.2s ease;
+}
+
+.fs-resize-handle:hover {
+  background: #4CAF50;
+}
+
+.fs-resize-handle:active {
+  background: #45a049;
 }
 
 .fs-form {
@@ -14,6 +36,23 @@
 
 .fs-input {
   width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.fs-input:focus {
+  outline: none;
+  border-color: #4CAF50;
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+}
+
+textarea.fs-input {
+  resize: vertical;
+  min-height: 80px;
 }
 
 .fs-button {
@@ -191,6 +230,30 @@
 .fs-comments-close:hover {
   background: #e0e0e0;
   transform: translateY(-1px);
+}
+
+/* Sección de descripción del trabajo */
+.fs-description-section {
+  margin-bottom: 16px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border: 1px solid #e6e6e6;
+}
+
+.fs-description-title {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #555;
+}
+
+.fs-description-text {
+  font-size: 13px;
+  color: #333;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.5;
 }
 
 .fs-comments-list {
