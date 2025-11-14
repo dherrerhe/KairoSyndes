@@ -8,89 +8,15 @@ import CustomNode from './CustomNode';
 import EdgeEditorPanel from './EdgeEditorPanel';
 import { useLocation } from 'react-router-dom';
 import { getId } from './flowUtils';
+import { workflowApi } from '../api/workflowApi';
 
 const nodeTypes = { custom: CustomNode };
 
-// Nodos iniciales de respaldo (si no hay workflow)
+// Nodos iniciales de respaldo
 const initialNodes = [
-  { id: '1', type: 'custom', position: { x: 250, y: 5 }, data: { name: 'Nodo A', time: '2h', inCharge: 'Usuario 1' } },
+  { id: '1', type: 'custom', position: { x: 250, y: 5 }, data: { name: 'Nodo A', time: '2h', inCharge: 'Usuario 1', progress: 0 } },
 ];
 const initialEdges = [];
-
-// ============================================
-// API Functions - Comunicación con Django
-// ============================================
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
-
-const apiCall = async (endpoint, options = {}) => {
-  const token = localStorage.getItem('auth_token'); // Si usas autenticación
-  const headers = {
-    'Content-Type': 'application/json',
-    ...(token && { 'Authorization': `Bearer ${token}` }),
-    ...options.headers,
-  };
-
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers,
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.detail || errorData.error || `Error ${response.status}`);
-  }
-
-  return response.json();
-};
-
-// Cargar workflow completo desde el backend
-const fetchWorkflow = async (workflowId) => {
-  return await apiCall(`/workflows/${workflowId}/`);
-};
-
-// Cargar nodos de un workflow
-const fetchNodes = async (workflowId) => {
-  return await apiCall(`/workflows/${workflowId}/nodes/`);
-};
-
-// Cargar edges de un workflow
-const fetchEdges = async (workflowId) => {
-  return await apiCall(`/workflows/${workflowId}/edges/`);
-};
-
-// Guardar workflow completo
-const saveWorkflow = async (workflowId, nodes, edges) => {
-  return await apiCall(`/workflows/${workflowId}/`, {
-    method: 'PATCH',
-    body: JSON.stringify({
-      nodes: nodes,
-      edges: edges,
-    }),
-  });
-};
-
-// Crear un nodo nuevo
-const createNode = async (workflowId, nodeData) => {
-  return await apiCall(`/workflows/${workflowId}/nodes/`, {
-    method: 'POST',
-    body: JSON.stringify(nodeData),
-  });
-};
-
-// Actualizar un nodo existente
-const updateNode = async (workflowId, nodeId, nodeData) => {
-  return await apiCall(`/workflows/${workflowId}/nodes/${nodeId}/`, {
-    method: 'PATCH',
-    body: JSON.stringify(nodeData),
-  });
-};
-
-// Eliminar un nodo
-const deleteNode = async (workflowId, nodeId) => {
-  return await apiCall(`/workflows/${workflowId}/nodes/${nodeId}/`, {
-    method: 'DELETE',
-  });
-};
 
 // ============================================
 // Componente Principal
@@ -117,7 +43,13 @@ export default function FlowComponent() {
   const [selectedNode, setSelectedNode] = useState(null);
   const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
   const [isContextMenuVisible, setIsContextMenuVisible] = useState(false);
-  const [editingNodeData, setEditingNodeData] = useState({ name: '', time: '', inCharge: '', ip: '' });
+  const [editingNodeData, setEditingNodeData] = useState({ 
+    name: '', 
+    time: '', 
+    inCharge: '', 
+    ip: '', 
+    progress: 0 
+  });
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
@@ -138,10 +70,9 @@ export default function FlowComponent() {
       setLoadError(null);
 
       try {
-        // Cargar nodos y edges del backend
         const [nodesData, edgesData] = await Promise.all([
-          fetchNodes(workflowId),
-          fetchEdges(workflowId),
+          workflowApi.fetchNodes(workflowId),
+          workflowApi.fetchEdges(workflowId),
         ]);
 
         // Transformar nodos del backend al formato de ReactFlow
@@ -154,7 +85,7 @@ export default function FlowComponent() {
             time: node.data?.time || '',
             inCharge: node.data?.inCharge || '',
             ip: node.data?.ip || '',
-            // Se inyectará onChangeLabel después
+            progress: node.data?.progress !== undefined ? node.data.progress : 0,
           },
         }));
 
@@ -177,7 +108,6 @@ export default function FlowComponent() {
         console.error('Error cargando workflow:', error);
         setLoadError(error.message);
         setFeedback(`Error: ${error.message}`);
-        // Usar datos iniciales como respaldo
         setNodes(initialNodes);
         setEdges(initialEdges);
       } finally {
@@ -186,7 +116,7 @@ export default function FlowComponent() {
     };
 
     loadWorkflowData();
-  }, [workflowId]); // Se ejecuta cuando cambia el workflowId
+  }, [workflowId]);
 
   // ============================================
   // Función para obtener IP del usuario
@@ -228,8 +158,9 @@ export default function FlowComponent() {
 
   // ============================================
   // Handler para agregar nodo (desde sidebar)
+  // ACTUALIZADO: Ahora incluye progress y type
   // ============================================
-  const handleAddNode = useCallback(async ({ name, time, inCharge }) => {
+  const handleAddNode = useCallback(async ({ name, time, inCharge, type = 'custom' }) => {
     if (!workflowId) {
       setFeedback('No hay workflowId activo.');
       return;
@@ -237,25 +168,42 @@ export default function FlowComponent() {
 
     try {
       const userIP = await getUserIP();
-      const tempId = getId(); // ID temporal
+      const tempId = getId();
+      const position = { x: 120 + Math.random() * 200, y: 120 + Math.random() * 80 };
 
-      // Agregar nodo localmente primero (optimistic update)
-      const newNode = {
-        id: tempId,
-        type: 'custom',
-        position: { x: 120 + Math.random() * 200, y: 120 + Math.random() * 80 },
-        data: { name, time, inCharge, ip: userIP, onChangeLabel: handleChangeLabel }
-      };
+      const nodeToAdd =
+        type === 'custom'
+          ? {
+              id: tempId,
+              type: 'custom',
+              position,
+              data: { 
+                name, 
+                time, 
+                inCharge, 
+                ip: userIP, 
+                progress: 0,
+                onChangeLabel: handleChangeLabel 
+              }
+            }
+          : {
+              id: tempId,
+              position,
+              data: { label: name }
+            };
 
-      setNodes((existingNodes) => [...existingNodes, newNode]);
+      // Agregar localmente primero (optimistic update)
+      setNodes((existingNodes) => [...existingNodes, nodeToAdd]);
 
       // Guardar en el backend
-      const savedNode = await createNode(workflowId, {
+      const savedNode = await workflowApi.createNode(workflowId, {
         workflow: parseInt(workflowId),
-        node_type: 'custom',
+        node_type: type,
         name: name,
-        position: newNode.position,
-        data: { name, time, inCharge, ip: userIP }
+        position: position,
+        data: type === 'custom' 
+          ? { name, time, inCharge, ip: userIP, progress: 0 }
+          : { label: name }
       });
 
       // Actualizar con el ID real del backend
@@ -272,6 +220,8 @@ export default function FlowComponent() {
     } catch (error) {
       console.error('Error creando nodo:', error);
       setFeedback(`Error: ${error.message}`);
+      // Revertir optimistic update en caso de error
+      setNodes((nds) => nds.filter((n) => n.id !== tempId));
     }
   }, [workflowId, setNodes, getUserIP, handleChangeLabel]);
 
@@ -288,13 +238,23 @@ export default function FlowComponent() {
   // ============================================
   // Handlers de ReactFlow
   // ============================================
-  const onConnect = useCallback((params) => {
+  const onConnect = useCallback(async (params) => {
     setEdges((eds) => addEdge(params, eds));
     
-    // TODO: Guardar edge en el backend
+    // Guardar edge en el backend
     if (workflowId) {
-      // Implementar createEdge similar a createNode
-      console.log('TODO: Guardar edge en backend', params);
+      try {
+        await workflowApi.createEdge(workflowId, {
+          workflow: parseInt(workflowId),
+          source_node: parseInt(params.source),
+          target_node: parseInt(params.target),
+          edge_type: params.type || 'default',
+          label: params.label || '',
+        });
+      } catch (error) {
+        console.error('Error guardando edge:', error);
+        setFeedback(`Error al guardar conexión: ${error.message}`);
+      }
     }
   }, [setEdges, workflowId]);
 
@@ -318,7 +278,7 @@ export default function FlowComponent() {
         type: type === 'custom' ? 'custom' : undefined,
         position,
         data: type === 'custom'
-          ? { name: label, time, inCharge, ip: userIP, onChangeLabel: handleChangeLabel }
+          ? { name: label, time, inCharge, ip: userIP, progress: 0, onChangeLabel: handleChangeLabel }
           : { label }
       };
 
@@ -327,17 +287,20 @@ export default function FlowComponent() {
       // Guardar en backend si hay workflowId
       if (workflowId) {
         try {
-          const savedNode = await createNode(workflowId, {
+          const savedNode = await workflowApi.createNode(workflowId, {
             workflow: parseInt(workflowId),
             node_type: type,
             name: label,
             position: position,
-            data: type === 'custom' ? { name: label, time, inCharge, ip: userIP } : { label }
+            data: type === 'custom' 
+              ? { name: label, time, inCharge, ip: userIP, progress: 0 }
+              : { label }
           });
 
           setNodes((nds) => nds.map((n) => n.id === tempId ? { ...n, id: savedNode.id.toString() } : n));
         } catch (error) {
           console.error('Error guardando nodo centrado:', error);
+          setFeedback(`Error: ${error.message}`);
         }
       }
     },
@@ -355,7 +318,8 @@ export default function FlowComponent() {
       name: node.data.name || '', 
       time: node.data.time || '', 
       inCharge: node.data.inCharge || '', 
-      ip: node.data.ip || '' 
+      ip: node.data.ip || '',
+      progress: node.data.progress !== undefined ? node.data.progress : 0
     });
     setIsContextMenuVisible(true);
   }, []);
@@ -368,12 +332,14 @@ export default function FlowComponent() {
 
   // ============================================
   // Actualizar nodo desde menú contextual
+  // ACTUALIZADO: Ahora incluye progress con validación
   // ============================================
   const updateNodeData = useCallback(async () => {
     if (!selectedNode || !workflowId) return;
 
     try {
       const userIP = await getUserIP();
+      const validProgress = Math.max(0, Math.min(100, Number(editingNodeData.progress) || 0));
       
       // Actualizar localmente
       setNodes((nds) =>
@@ -386,6 +352,7 @@ export default function FlowComponent() {
                   name: editingNodeData.name,
                   time: editingNodeData.time,
                   inCharge: editingNodeData.inCharge,
+                  progress: validProgress,
                   ip: userIP,
                   onChangeLabel: handleChangeLabel
                 }
@@ -395,12 +362,13 @@ export default function FlowComponent() {
       );
 
       // Actualizar en el backend
-      await updateNode(workflowId, selectedNode.id, {
+      await workflowApi.updateNode(workflowId, selectedNode.id, {
         name: editingNodeData.name,
         data: {
           name: editingNodeData.name,
           time: editingNodeData.time,
           inCharge: editingNodeData.inCharge,
+          progress: validProgress,
           ip: userIP
         }
       });
@@ -426,7 +394,6 @@ export default function FlowComponent() {
     try {
       const instanceNodes = reactFlowInstance?.current?.getNodes?.() ?? nodes;
 
-      // Preparar nodos para enviar al backend
       const nodesForSave = instanceNodes.map((n) => ({
         id: parseInt(n.id),
         node_type: n.type || 'default',
@@ -435,11 +402,11 @@ export default function FlowComponent() {
           name: n.data.name,
           time: n.data.time,
           inCharge: n.data.inCharge,
-          ip: n.data.ip
+          ip: n.data.ip,
+          progress: n.data.progress !== undefined ? n.data.progress : 0
         }
       }));
 
-      // Preparar edges para enviar al backend
       const edgesForSave = edges.map((e) => ({
         id: parseInt(e.id),
         source_node: parseInt(e.source),
@@ -450,7 +417,7 @@ export default function FlowComponent() {
         style: e.style || {}
       }));
 
-      await saveWorkflow(workflowId, nodesForSave, edgesForSave);
+      await workflowApi.saveWorkflow(workflowId, nodesForSave, edgesForSave);
 
       setFeedback('Workflow guardado en el servidor.');
       setTimeout(() => setFeedback(''), 2200);
@@ -478,7 +445,24 @@ export default function FlowComponent() {
   const handleExport = useCallback(() => {
     try {
       const instanceNodes = reactFlowInstance?.current?.getNodes?.() ?? nodes;
-      const payload = { nodes: instanceNodes, edges, exportedAt: new Date().toISOString() };
+      
+      const nodesForExport = instanceNodes.map((n) => {
+        const safeData = { ...n.data };
+        if (safeData.onChangeLabel) delete safeData.onChangeLabel;
+        return { id: n.id, type: n.type, position: n.position, data: safeData };
+      });
+
+      const edgesForExport = edges.map((e) => {
+        const { id, source, target, label, type, animated, style } = e;
+        return { id, source, target, label, type, animated, style };
+      });
+
+      const payload = { 
+        nodes: nodesForExport, 
+        edges: edgesForExport, 
+        exportedAt: new Date().toISOString() 
+      };
+      
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -486,6 +470,7 @@ export default function FlowComponent() {
       a.download = `workflow_${workflowId || 'sin_id'}.json`;
       a.click();
       URL.revokeObjectURL(url);
+      
       setFeedback('Workflow exportado.');
       setTimeout(() => setFeedback(''), 2200);
     } catch (err) {
@@ -494,7 +479,9 @@ export default function FlowComponent() {
     }
   }, [nodes, edges, workflowId]);
 
+  // ============================================
   // Otros handlers
+  // ============================================
   const onDragOver = useCallback((event) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
@@ -505,16 +492,34 @@ export default function FlowComponent() {
     setSelectedEdgeId(edge.id);
   }, []);
 
-  const saveEdgeLabel = useCallback((edgeId, newLabel) => {
+  const saveEdgeLabel = useCallback(async (edgeId, newLabel) => {
     setEdges((eds) => eds.map((e) => (e.id === edgeId ? { ...e, label: newLabel } : e)));
-    // TODO: Actualizar edge en backend
-  }, [setEdges]);
+    
+    // Actualizar en backend
+    if (workflowId) {
+      try {
+        await workflowApi.updateEdge(workflowId, edgeId, { label: newLabel });
+      } catch (error) {
+        console.error('Error actualizando edge:', error);
+      }
+    }
+  }, [setEdges, workflowId]);
 
-  const deleteEdge = useCallback((edgeId) => {
+  const deleteEdge = useCallback(async (edgeId) => {
     setEdges((eds) => eds.filter((e) => e.id !== edgeId));
     setSelectedEdgeId(null);
-    // TODO: Eliminar edge del backend
-  }, [setEdges]);
+    
+    // Eliminar del backend
+    if (workflowId) {
+      try {
+        await workflowApi.deleteEdge(workflowId, edgeId);
+        setFeedback('Arista eliminada.');
+        setTimeout(() => setFeedback(''), 2000);
+      } catch (error) {
+        console.error('Error eliminando edge:', error);
+      }
+    }
+  }, [setEdges, workflowId]);
 
   const selectedEdge = edges.find((e) => e.id === selectedEdgeId) ?? null;
 
@@ -599,7 +604,11 @@ export default function FlowComponent() {
 
   return (
     <div className="flow-container" style={{ display: 'flex', gap: 8 }}>
-      <FlowSidebar onAddNode={handleAddNode} onResetFlow={handleResetFlow}>
+      <FlowSidebar 
+        onAddNode={handleAddNode} 
+        onResetFlow={handleResetFlow}
+        nodes={nodes}
+      >
         <hr className="flow-separator" />
         <h4 className="flow-tips-title">Tips</h4>
         <ul className="flow-tips-list">
@@ -651,7 +660,7 @@ export default function FlowComponent() {
             left: 8, 
             zIndex: 5, 
             padding: '8px 12px', 
-            background: '#4CAF50', 
+            background: feedback.includes('Error') ? '#f44336' : '#4CAF50', 
             color: 'white', 
             borderRadius: 4 
           }}>
@@ -720,6 +729,19 @@ export default function FlowComponent() {
                   onChange={(e) => setEditingNodeData(prev => ({ ...prev, inCharge: e.target.value }))} 
                   className="context-menu-input" 
                   placeholder="Nombre del responsable" 
+                />
+              </label>
+
+              <label className="context-menu-label">
+                Progreso (%):
+                <input 
+                  type="number" 
+                  min="0" 
+                  max="100" 
+                  value={editingNodeData.progress !== undefined ? editingNodeData.progress : 0} 
+                  onChange={(e) => setEditingNodeData(prev => ({ ...prev, progress: e.target.value }))} 
+                  className="context-menu-input" 
+                  placeholder="0-100" 
                 />
               </label>
             </div>
