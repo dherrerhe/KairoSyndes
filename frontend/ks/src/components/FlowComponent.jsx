@@ -14,7 +14,22 @@ import CustomNode from './CustomNode';
 import EdgeEditorPanel from './EdgeEditorPanel';
 import { useLocation } from 'react-router-dom';
 import { getId, saveWorkflowToLocalStorage, loadWorkflowFromLocalStorage, limpiarDatosNodoParaSerializar } from './flowUtils';
+import '../fcStyles/NodeContextMenu.css';
 const nodeTypes = { custom: CustomNode };
+
+// Colores predefinidos para los nodos (mismo que en FlowSidebar)
+const PREDEFINED_COLORS = [
+  { name: 'Azul', value: '#2196F3' },
+  { name: 'Verde', value: '#4CAF50' },
+  { name: 'Rojo', value: '#F44336' },
+  { name: 'Amarillo', value: '#FFEB3B' },
+  { name: 'Naranja', value: '#FF9800' },
+  { name: 'Púrpura', value: '#9C27B0' },
+  { name: 'Rosa', value: '#E91E63' },
+  { name: 'Cian', value: '#00BCD4' },
+  { name: 'Gris', value: '#607D8B' },
+  { name: 'Marrón', value: '#795548' }
+];
 
 const initialNodes = [
   {
@@ -80,7 +95,7 @@ export default function FlowComponent() {
   const [selectedNode, setSelectedNode] = useState(null);
   const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
   const [isContextMenuVisible, setIsContextMenuVisible] = useState(false);
-  const [editingNodeData, setEditingNodeData] = useState({ name: '', time: '', inCharge: '', description: '', ip: '', progress: 0 });
+  const [editingNodeData, setEditingNodeData] = useState({ name: '', time: '', inCharge: '', description: '', color: '#4CAF50', ip: '', progress: 0 });
 
   // Comentarios
   const [commentNodeId, setCommentNodeId] = useState(null);
@@ -184,7 +199,7 @@ export default function FlowComponent() {
 
   // --- Handler para agregar un nodo desde el sidebar
   const handleAddNode = useCallback(
-    async ({ name, time, inCharge, description, type = 'custom' }) => {
+    async ({ name, time, inCharge, description, color = '#4CAF50', type = 'custom' }) => {
       const userIP = await getUserIP();
       const position = { x: 120 + Math.random() * 200, y: 120 + Math.random() * 80 };
 
@@ -199,6 +214,7 @@ export default function FlowComponent() {
                 time,
                 inCharge,
                 description,
+                color,
                 ip: userIP,
                 progress: 0,
                 comments: [],
@@ -303,6 +319,7 @@ export default function FlowComponent() {
                 time,
                 inCharge,
                 description,
+                color: '#4CAF50',
                 ip: userIP,
                 progress: 0,
                 comments: [],
@@ -330,6 +347,7 @@ export default function FlowComponent() {
       time: node.data.time || '', 
       inCharge: node.data.inCharge || '', 
       description: node.data.description || '',
+      color: node.data.color || '#4CAF50',
       ip: node.data.ip || '',
       progress: node.data.progress !== undefined ? node.data.progress : 0
     });
@@ -436,6 +454,7 @@ export default function FlowComponent() {
                   time: editingNodeData.time,
                   inCharge: editingNodeData.inCharge,
                   description: editingNodeData.description,
+                  color: editingNodeData.color || '#4CAF50',
                   progress: editingNodeData.progress !== undefined ? Math.max(0, Math.min(100, Number(editingNodeData.progress) || 0)) : 0,
                   ip: userIP, // Actualizar con la IP del usuario que modifica
                   comments: Array.isArray(n.data?.comments) ? n.data.comments : [],
@@ -634,6 +653,22 @@ export default function FlowComponent() {
                   placeholder="Describe el trabajo que se va a realizar..."
                   rows={4}
                 />
+              </label>
+
+              <label className="context-menu-label">
+                Color del nodo:
+                <div className="context-menu-color-selector">
+                  {PREDEFINED_COLORS.map((color) => (
+                    <button
+                      key={color.value}
+                      type="button"
+                      className={`context-menu-color-button ${(editingNodeData.color || '#4CAF50') === color.value ? 'active' : ''}`}
+                      style={{ backgroundColor: color.value }}
+                      onClick={() => setEditingNodeData(prev => ({ ...prev, color: color.value }))}
+                      title={color.name}
+                    />
+                  ))}
+                </div>
               </label>
 
               <label className="context-menu-label">

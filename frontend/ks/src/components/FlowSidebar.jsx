@@ -2,14 +2,28 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import '../fcStyles/FlowSidebar.css';
 
+// Colores predefinidos para los nodos
+const PREDEFINED_COLORS = [
+  { name: 'Azul', value: '#2196F3' },
+  { name: 'Verde', value: '#4CAF50' },
+  { name: 'Rojo', value: '#F44336' },
+  { name: 'Amarillo', value: '#FFEB3B' },
+  { name: 'Naranja', value: '#FF9800' },
+  { name: 'Púrpura', value: '#9C27B0' },
+  { name: 'Rosa', value: '#E91E63' },
+  { name: 'Cian', value: '#00BCD4' },
+  { name: 'Gris', value: '#607D8B' },
+  { name: 'Marrón', value: '#795548' }
+];
 
 // Sidebar para crear nodos y otros controles laterales del flujo
 export default function FlowSidebar({ onAddNode, onResetFlow, children, nodes = [], commentNode = null, onAddComment, onCloseComments }) {
-  // Estados locales para los inputs del formulario (nombre, tiempo, responsable, descripción)
+  // Estados locales para los inputs del formulario (nombre, tiempo, responsable, descripción, color)
   const [name, setName] = useState('');
   const [time, setTime] = useState('');
   const [inCharge, setInCharge] = useState('');
   const [description, setDescription] = useState('');
+  const [nodeColor, setNodeColor] = useState('#4CAF50'); // Color por defecto verde
   const [nodeType, setNodeType] = useState('custom'); // 'custom' | 'normal'
   const [isProgressExpanded, setIsProgressExpanded] = useState(true); // Estado para el acordeón
   const [newComment, setNewComment] = useState('');
@@ -155,6 +169,7 @@ export default function FlowSidebar({ onAddNode, onResetFlow, children, nodes = 
         time: time.trim(),
         inCharge: inCharge.trim(),
         description: description.trim(),
+        color: nodeColor,
         type: nodeType,
       });
     }
@@ -163,6 +178,7 @@ export default function FlowSidebar({ onAddNode, onResetFlow, children, nodes = 
     setTime('');
     setInCharge('');
     setDescription('');
+    setNodeColor('#4CAF50'); // Resetear al color por defecto
     setNodeType('custom');
   };
 
@@ -279,6 +295,23 @@ export default function FlowSidebar({ onAddNode, onResetFlow, children, nodes = 
               rows={4}
               required
             />
+          </label>
+        </div>
+        <div>
+          <label>
+            Color del nodo<br />
+            <div className="fs-color-selector">
+              {PREDEFINED_COLORS.map((color) => (
+                <button
+                  key={color.value}
+                  type="button"
+                  className={`fs-color-button ${nodeColor === color.value ? 'active' : ''}`}
+                  style={{ backgroundColor: color.value }}
+                  onClick={() => setNodeColor(color.value)}
+                  title={color.name}
+                />
+              ))}
+            </div>
           </label>
         </div>
         {/* Botón para agregar nodo */}
