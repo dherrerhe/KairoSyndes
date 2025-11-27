@@ -39,13 +39,18 @@ const LoginPage = () => {
     }, 1000);
   }, [formData, navigate, validate]);
 
+  const handleNavigateToRegister = useCallback(() => {
+    navigate('/register');
+  }, [navigate]);
+
   const formProps = useMemo(() => ({
     formData,
     errors,
     isSubmitting,
     onChange: handleChange,
     onSubmit: handleSubmit,
-  }), [formData, errors, isSubmitting, handleChange, handleSubmit]);
+    onNavigateToRegister: handleNavigateToRegister,
+  }), [formData, errors, isSubmitting, handleChange, handleSubmit, handleNavigateToRegister]);
 
   return (
     <div className="login-page">

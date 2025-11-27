@@ -33,6 +33,7 @@ import { GiHamburgerMenu } from "react-icons/gi";
 import { WorkSpace } from './pages/WorkSpace';
 import Home from './pages/Home';
 import LoginPage from './pages/Login';  // Importa la página de Login
+import RegisterPage from './pages/Register';  // Importa la página de Registro
 
 /**
  * Componente principal de la aplicación KairoSyndes.
@@ -76,6 +77,9 @@ function App() {
           
           {/* Ruta alternativa para el login (/login) - misma página */}
           <Route path='/login' element={<LoginPage />} />
+          
+          {/* Ruta para el registro de usuarios (/register) */}
+          <Route path='/register' element={<RegisterPage />} />
           
           {/* Ruta para la página principal (/Home) - solo accesible después del login */}
           <Route path='/Home' element={<Home />} />

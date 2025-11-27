@@ -63,7 +63,7 @@ function darkenColor(hexColor, amount = 0.2) {
 
 export default function CustomNode({ id, data }) {
   // Extraer propiedades del objeto data con valores por defecto
-  const { name = '', time = '', inCharge = '', ip = '', progress = 0, color = '#4CAF50', onShowComments } = data || {};
+  const { name = '', time = '', inCharge = '', progress = 0, color = '#4CAF50', onShowComments } = data || {};
   
   // Asegurar que progress esté entre 0 y 100
   const progressValue = Math.max(0, Math.min(100, Number(progress) || 0));
@@ -165,12 +165,6 @@ export default function CustomNode({ id, data }) {
           <div className="custom-node-field">
             <span className="custom-node-label" style={textStyle}>Responsable:</span>
             <span className="custom-node-value" style={valueStyle}>{inCharge}</span>
-          </div>
-        )}
-        {ip && (
-          <div className="custom-node-field">
-            <span className="custom-node-label" style={textStyle}>IP:</span>
-            <span className="custom-node-value" style={valueStyle}>{ip}</span>
           </div>
         )}
       </div>

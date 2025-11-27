@@ -96,6 +96,21 @@ export default function FlowComponent() {
   const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
   const [isContextMenuVisible, setIsContextMenuVisible] = useState(false);
   const [editingNodeData, setEditingNodeData] = useState({ name: '', time: '', inCharge: '', description: '', color: '#4CAF50', ip: '', progress: 0 });
+  
+  // Estados para controlar qué secciones del menú están expandidas (solo las últimas 3)
+  const [expandedSections, setExpandedSections] = useState({
+    description: false,
+    color: false,
+    progress: false
+  });
+  
+  // Función para toggle de secciones
+  const toggleSection = useCallback((section) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  }, []);
 
   // Comentarios
   const [commentNodeId, setCommentNodeId] = useState(null);
@@ -357,6 +372,12 @@ export default function FlowComponent() {
   const closeContextMenu = useCallback(() => {
     setIsContextMenuVisible(false);
     setSelectedNode(null);
+    // Resetear todas las secciones expandidas al cerrar el menú
+    setExpandedSections({
+      description: false,
+      color: false,
+      progress: false
+    });
     setIsDragging(false);
   }, []);
 
@@ -629,73 +650,142 @@ export default function FlowComponent() {
             </div>
 
             <div className="context-menu-content">
+              {/* Campo fijo: Nombre */}
               <label className="context-menu-label">
                 Nombre:
-                <input type="text" value={editingNodeData.name} onChange={(e) => setEditingNodeData(prev => ({ ...prev, name: e.target.value }))} className="context-menu-input" />
+                <input 
+                  type="text" 
+                  value={editingNodeData.name} 
+                  onChange={(e) => setEditingNodeData(prev => ({ ...prev, name: e.target.value }))} 
+                  className="context-menu-input" 
+                  placeholder="Nombre del nodo"
+                />
               </label>
 
+              {/* Campo fijo: Tiempo */}
               <label className="context-menu-label">
                 Tiempo:
-                <input type="text" value={editingNodeData.time} onChange={(e) => setEditingNodeData(prev => ({ ...prev, time: e.target.value }))} className="context-menu-input" placeholder="ej: 2h, 30min" />
+                <input 
+                  type="text" 
+                  value={editingNodeData.time} 
+                  onChange={(e) => setEditingNodeData(prev => ({ ...prev, time: e.target.value }))} 
+                  className="context-menu-input" 
+                  placeholder="ej: 2h, 30min" 
+                />
               </label>
 
+              {/* Campo fijo: Encargado */}
               <label className="context-menu-label">
                 Encargado:
-                <input type="text" value={editingNodeData.inCharge} onChange={(e) => setEditingNodeData(prev => ({ ...prev, inCharge: e.target.value }))} className="context-menu-input" placeholder="Nombre del responsable" />
-              </label>
-
-              <label className="context-menu-label">
-                Descripción del trabajo:
-                <textarea 
-                  value={editingNodeData.description} 
-                  onChange={(e) => setEditingNodeData(prev => ({ ...prev, description: e.target.value }))} 
-                  className="context-menu-input" 
-                  placeholder="Describe el trabajo que se va a realizar..."
-                  rows={4}
-                />
-              </label>
-
-              <label className="context-menu-label">
-                Color del nodo:
-                <div className="context-menu-color-selector">
-                  {PREDEFINED_COLORS.map((color) => (
-                    <button
-                      key={color.value}
-                      type="button"
-                      className={`context-menu-color-button ${(editingNodeData.color || '#4CAF50') === color.value ? 'active' : ''}`}
-                      style={{ backgroundColor: color.value }}
-                      onClick={() => setEditingNodeData(prev => ({ ...prev, color: color.value }))}
-                      title={color.name}
-                    />
-                  ))}
-                </div>
-              </label>
-
-              <label className="context-menu-label">
-                Progreso (%):
                 <input 
-                  type="number" 
-                  min="0" 
-                  max="100" 
-                  value={editingNodeData.progress !== undefined ? editingNodeData.progress : 0} 
-                  onChange={(e) => setEditingNodeData(prev => ({ ...prev, progress: e.target.value }))} 
+                  type="text" 
+                  value={editingNodeData.inCharge} 
+                  onChange={(e) => setEditingNodeData(prev => ({ ...prev, inCharge: e.target.value }))} 
                   className="context-menu-input" 
-                  placeholder="0-100" 
+                  placeholder="Nombre del responsable" 
                 />
               </label>
-            </div>
 
-            {/* Información de solo lectura - IP */}
-            <div className="context-menu-readonly">
-              <div className="context-menu-label">
-                Último modificador:
-                <div className="context-menu-ip-display">{editingNodeData.ip || 'Sin IP'}</div>
+              {/* Sección desplegable: Descripción */}
+              <div className="context-menu-accordion">
+                <button 
+                  type="button"
+                  className="context-menu-accordion-header"
+                  onClick={() => toggleSection('description')}
+                >
+                  <span>Descripción del trabajo</span>
+                  <span className="context-menu-accordion-arrow">
+                    {expandedSections.description ? '▼' : '▶'}
+                  </span>
+                </button>
+                {expandedSections.description && (
+                  <div className="context-menu-accordion-content">
+                    <label className="context-menu-label">
+                      <textarea 
+                        value={editingNodeData.description} 
+                        onChange={(e) => setEditingNodeData(prev => ({ ...prev, description: e.target.value }))} 
+                        className="context-menu-input" 
+                        placeholder="Describe el trabajo que se va a realizar..."
+                        rows={4}
+                      />
+                    </label>
+                  </div>
+                )}
+              </div>
+
+              {/* Sección desplegable: Color */}
+              <div className="context-menu-accordion">
+                <button 
+                  type="button"
+                  className="context-menu-accordion-header"
+                  onClick={() => toggleSection('color')}
+                >
+                  <span>Color del nodo</span>
+                  <span className="context-menu-accordion-arrow">
+                    {expandedSections.color ? '▼' : '▶'}
+                  </span>
+                </button>
+                {expandedSections.color && (
+                  <div className="context-menu-accordion-content">
+                    <label className="context-menu-label">
+                      <div className="context-menu-color-selector">
+                        {PREDEFINED_COLORS.map((color) => (
+                          <button
+                            key={color.value}
+                            type="button"
+                            className={`context-menu-color-button ${(editingNodeData.color || '#4CAF50') === color.value ? 'active' : ''}`}
+                            style={{ backgroundColor: color.value }}
+                            onClick={() => setEditingNodeData(prev => ({ ...prev, color: color.value }))}
+                            title={color.name}
+                          />
+                        ))}
+                      </div>
+                    </label>
+                  </div>
+                )}
+              </div>
+
+              {/* Sección desplegable: Progreso */}
+              <div className="context-menu-accordion">
+                <button 
+                  type="button"
+                  className="context-menu-accordion-header"
+                  onClick={() => toggleSection('progress')}
+                >
+                  <span>Progreso (%)</span>
+                  <span className="context-menu-accordion-arrow">
+                    {expandedSections.progress ? '▼' : '▶'}
+                  </span>
+                </button>
+                {expandedSections.progress && (
+                  <div className="context-menu-accordion-content">
+                    <label className="context-menu-label">
+                      <input 
+                        type="number" 
+                        min="0" 
+                        max="100" 
+                        value={editingNodeData.progress !== undefined ? editingNodeData.progress : 0} 
+                        onChange={(e) => setEditingNodeData(prev => ({ ...prev, progress: e.target.value }))} 
+                        className="context-menu-input" 
+                        placeholder="0-100" 
+                      />
+                    </label>
+                  </div>
+                )}
               </div>
             </div>
 
             <div className="context-menu-actions">
               <button className="context-menu-save" onClick={updateNodeData}>Guardar</button>
               <button className="context-menu-cancel" onClick={closeContextMenu}>Cancelar</button>
+            </div>
+
+            {/* Información de solo lectura - IP (solo en la parte inferior del menú) */}
+            <div className="context-menu-readonly">
+              <div className="context-menu-label">
+                Último modificador:
+                <div className="context-menu-ip-display">{editingNodeData.ip || 'Sin IP'}</div>
+              </div>
             </div>
           </div>
         )}
