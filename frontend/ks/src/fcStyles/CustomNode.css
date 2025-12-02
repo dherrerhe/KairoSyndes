@@ -5,6 +5,8 @@
   padding: 10px;
   min-width: 120px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  position: relative;
+  padding-top: 28px;
 }
 
 .custom-node-name {
@@ -41,5 +43,63 @@
   background: #4CAF50;
   border: 2px solid #fff;
   border-radius: 50%;
+}
+
+/* Contenedor de la barra de progreso */
+.custom-node-progress-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 8px 0;
+  position: relative;
+}
+
+/* SVG de la barra de progreso */
+.custom-node-progress-svg {
+  display: block;
+}
+
+/* Círculo de fondo de la barra de progreso */
+.custom-node-progress-bg {
+  transition: stroke 0.3s ease;
+}
+
+/* Círculo de la barra de progreso */
+.custom-node-progress-bar {
+  transition: stroke-dashoffset 0.5s ease;
+}
+
+/* Texto del porcentaje */
+.custom-node-progress-text {
+  position: absolute;
+  font-size: 11px;
+  font-weight: 600;
+  color: #4CAF50;
+  text-align: center;
+  pointer-events: none;
+}
+
+.custom-node-comment-btn {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: none;
+  background: #f0f0f0;
+  color: #333;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+  padding: 0;
+}
+
+.custom-node-comment-btn:hover {
+  background: #e0e0e0;
+  transform: translateY(-1px);
 }
 

@@ -1,11 +1,33 @@
 .flow-sidebar {
   padding: 16px;
   border-right: 1px solid #ccc;
-  width: 260px;
   background: #fafbfc;
   height: 100%;
   box-sizing: border-box;
   overflow-y: auto;
+  position: relative;
+  flex-shrink: 0;
+}
+
+/* Handle de redimensionamiento */
+.fs-resize-handle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 4px;
+  height: 100%;
+  background: transparent;
+  cursor: col-resize;
+  z-index: 10;
+  transition: background-color 0.2s ease;
+}
+
+.fs-resize-handle:hover {
+  background: #4CAF50;
+}
+
+.fs-resize-handle:active {
+  background: #45a049;
 }
 
 .fs-form {
@@ -14,6 +36,23 @@
 
 .fs-input {
   width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.fs-input:focus {
+  outline: none;
+  border-color: #4CAF50;
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+}
+
+textarea.fs-input {
+  resize: vertical;
+  min-height: 80px;
 }
 
 .fs-button {
@@ -26,5 +65,320 @@
   border: 0;
   padding: 8px;
   cursor: pointer;
+}
+
+/* Sección de progreso del proyecto */
+.fs-progress-section {
+  margin-bottom: 20px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.fs-progress-header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #f8f9fa;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  transition: background-color 0.2s ease;
+}
+
+.fs-progress-header:hover {
+  background: #e9ecef;
+}
+
+.fs-progress-title {
+  flex: 1;
+  text-align: left;
+}
+
+.fs-progress-arrow {
+  font-size: 12px;
+  color: #666;
+  transition: transform 0.2s ease;
+}
+
+.fs-progress-content {
+  padding: 16px;
+  background: #fff;
+}
+
+.fs-progress-info {
+  margin-bottom: 12px;
+}
+
+.fs-progress-stats {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.fs-progress-label {
+  color: #666;
+  font-weight: 500;
+}
+
+.fs-progress-value {
+  color: #4CAF50;
+  font-weight: 600;
+}
+
+.fs-progress-bar-container {
+  margin: 12px 0;
+}
+
+.fs-progress-bar-bg {
+  width: 100%;
+  height: 24px;
+  background: #e0e0e0;
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+}
+
+.fs-progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4CAF50 0%, #45a049 100%);
+  border-radius: 12px;
+  transition: width 0.5s ease;
+  position: relative;
+}
+
+.fs-progress-bar-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.3) 50%,
+    transparent 100%
+  );
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.fs-progress-percentage {
+  text-align: center;
+  font-size: 18px;
+  font-weight: 700;
+  color: #4CAF50;
+  margin-top: 8px;
+}
+
+/* Sección de comentarios */
+.fs-comments-section {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: #fff;
+  padding: 16px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.fs-comments-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  gap: 8px;
+}
+
+.fs-comments-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+.fs-comments-close {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: #f0f0f0;
+  color: #555;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.fs-comments-close:hover {
+  background: #e0e0e0;
+  transform: translateY(-1px);
+}
+
+/* Sección de descripción del trabajo */
+.fs-description-section {
+  margin-bottom: 16px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border: 1px solid #e6e6e6;
+}
+
+.fs-description-title {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #555;
+}
+
+.fs-description-text {
+  font-size: 13px;
+  color: #333;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.5;
+}
+
+.fs-comments-list {
+  max-height: 180px;
+  overflow-y: auto;
+  margin-bottom: 12px;
+  padding-right: 4px;
+}
+
+.fs-comments-empty {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: #777;
+  font-style: italic;
+}
+
+.fs-comment-item {
+  background: #f8f9fa;
+  border-radius: 6px;
+  padding: 10px;
+  margin-bottom: 8px;
+  border: 1px solid #e6e6e6;
+}
+
+.fs-comment-text {
+  font-size: 13px;
+  color: #333;
+  margin-bottom: 6px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.fs-comment-meta {
+  font-size: 11px;
+  color: #888;
+  text-align: right;
+}
+
+.fs-comments-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fs-comments-textarea {
+  resize: vertical;
+  min-height: 60px;
+  max-height: 140px;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.fs-comments-textarea:focus {
+  outline: none;
+  border-color: #4CAF50;
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+}
+
+.fs-comments-submit {
+  align-self: flex-end;
+  background: #4CAF50;
+  color: #fff;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.fs-comments-submit:disabled {
+  background: #b7dbc0;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.fs-comments-submit:not(:disabled):hover {
+  background: #45a049;
+  transform: translateY(-1px);
+}
+
+/* Selector de colores predefinidos */
+.fs-color-selector {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.fs-color-button {
+  width: 100%;
+  height: 35px;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+  position: relative;
+}
+
+.fs-color-button:hover {
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  z-index: 1;
+}
+
+.fs-color-button.active {
+  border-color: #333;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1), inset 0 0 0 2px rgba(255, 255, 255, 0.3);
+}
+
+.fs-color-button.active::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #fff;
+  font-weight: bold;
+  font-size: 14px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 

@@ -73,8 +73,22 @@ const LoginPage = () => {
       setErrors({ general: 'Falló la conexión con el servidor' });
     } finally {
       setIsSubmitting(false);
-    }
-  }, [formData, navigate]);
+      navigate('/Home');
+    }, 1000);
+  }, [formData, navigate, validate]);
+
+  const handleNavigateToRegister = useCallback(() => {
+    navigate('/register');
+  }, [navigate]);
+
+  const formProps = useMemo(() => ({
+    formData,
+    errors,
+    isSubmitting,
+    onChange: handleChange,
+    onSubmit: handleSubmit,
+    onNavigateToRegister: handleNavigateToRegister,
+  }), [formData, errors, isSubmitting, handleChange, handleSubmit, handleNavigateToRegister]);
 
   return (
     <Login

@@ -2,7 +2,9 @@
 import React from 'react';
 import '../pagesStyles/Login.css';
 
-const Login = ({ formData, errors, isSubmitting, onChange, onSubmit }) => {
+// Componente presentacional del formulario de login
+// Recibe estado y callbacks por props desde la página contenedora
+const Login = ({ formData, errors, isSubmitting, onChange, onSubmit, onNavigateToRegister }) => {
   return (
     <div className="login-container">
       <div className="login-card">
@@ -49,6 +51,21 @@ const Login = ({ formData, errors, isSubmitting, onChange, onSubmit }) => {
             {isSubmitting ? 'Iniciando sesión...' : 'Iniciar Sesión'}
           </button>
         </form>
+
+        {/* Link para navegar al registro */}
+        <div className="login-footer">
+          <p className="login-footer-text">
+            ¿No tienes una cuenta?{' '}
+            <a href="/register" onClick={(e) => {
+              e.preventDefault();
+              if (onNavigateToRegister) {
+                onNavigateToRegister();
+              }
+            }} className="login-link">
+              Crear Cuenta
+            </a>
+          </p>
+        </div>
       </div>
     </div>
   );

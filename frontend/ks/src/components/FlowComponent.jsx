@@ -1,3 +1,10 @@
+/**
+ * FlowComponent.jsx — versión corregida para persistencia y uso correcto de callbacks
+ */
+// 
+
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ReactFlowProvider, addEdge, useNodesState, useEdgesState } from 'reactflow';
 // eslint-disable-next-line 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ReactFlowProvider, useNodesState, useEdgesState } from 'reactflow';
@@ -8,6 +15,38 @@ import FlowCanvas from './FlowCanvas';
 import CustomNode from './CustomNode';
 import EdgeEditorPanel from './EdgeEditorPanel';
 import { useLocation } from 'react-router-dom';
+import { getId, saveWorkflowToLocalStorage, loadWorkflowFromLocalStorage, limpiarDatosNodoParaSerializar } from './flowUtils';
+import '../fcStyles/NodeContextMenu.css';
+const nodeTypes = { custom: CustomNode };
+
+// Colores predefinidos para los nodos (mismo que en FlowSidebar)
+const PREDEFINED_COLORS = [
+  { name: 'Azul', value: '#2196F3' },
+  { name: 'Verde', value: '#4CAF50' },
+  { name: 'Rojo', value: '#F44336' },
+  { name: 'Amarillo', value: '#FFEB3B' },
+  { name: 'Naranja', value: '#FF9800' },
+  { name: 'Púrpura', value: '#9C27B0' },
+  { name: 'Rosa', value: '#E91E63' },
+  { name: 'Cian', value: '#00BCD4' },
+  { name: 'Gris', value: '#607D8B' },
+  { name: 'Marrón', value: '#795548' }
+];
+
+const initialNodes = [
+  {
+    id: '1',
+    type: 'custom',
+    position: { x: 250, y: 5 },
+    data: { name: 'Nodo A', time: '2h', inCharge: 'Usuario 1', progress: 0, comments: [] }
+  },
+  {
+    id: '2',
+    type: 'custom',
+    position: { x: 100, y: 150 },
+    data: { name: 'Nodo B', time: '1.5h', inCharge: 'Usuario 2', progress: 0, comments: [] }
+  },
+  { id: '3', position: { x: 400, y: 150 }, data: { label: 'Nodo C (normal)' } }
 // eslint-disable-next-line 
 import { getId } from './flowUtils';
 
@@ -83,6 +122,174 @@ export default function FlowComponent() {
   const [selectedNode, setSelectedNode] = useState(null);
   const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
   const [isContextMenuVisible, setIsContextMenuVisible] = useState(false);
+  const [editingNodeData, setEditingNodeData] = useState({ name: '', time: '', inCharge: '', description: '', color: '#4CAF50', ip: '', progress: 0 });
+  
+  // Estados para controlar qué secciones del menú están expandidas (solo las últimas 3)
+  const [expandedSections, setExpandedSections] = useState({
+    description: false,
+    color: false,
+    progress: false
+  });
+  
+  // Función para toggle de secciones
+  const toggleSection = useCallback((section) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  }, []);
+
+  // Comentarios
+  const [commentNodeId, setCommentNodeId] = useState(null);
+  const commentNode = useMemo(
+    () => (commentNodeId ? nodes.find((node) => node.id === commentNodeId) ?? null : null),
+    [commentNodeId, nodes]
+  );
+
+  // Función para obtener la IP real del usuario
+  const getUserIP = useCallback(async () => {
+    try {
+      const response = await fetch('https://api.ipify.org?format=json');
+      const data = await response.json();
+      return data.ip;
+    } catch (error) {
+      console.warn('No se pudo obtener la IP del usuario:', error);
+      return 'IP no disponible';
+    }
+  }, []);
+
+  useEffect(() => {
+    if (commentNodeId && !nodes.some((node) => node.id === commentNodeId)) {
+      setCommentNodeId(null);
+    }
+  }, [nodes, commentNodeId]);
+
+  const handleShowComments = useCallback((nodeId) => {
+    setCommentNodeId(nodeId);
+  }, []);
+
+  const handleCloseComments = useCallback(() => {
+    setCommentNodeId(null);
+  }, []);
+
+  // Dragging context menu
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+
+  // -------------------------
+  // handleChangeLabel (declaro acá; usa setNodes que ya existe)
+  // -------------------------
+  const handleChangeLabel = useCallback(
+    (nodeId, newData) => {
+      setNodes((nds) =>
+        nds.map((n) => {
+          if (n.id !== nodeId) return n;
+          const mergedData = { ...n.data, ...newData };
+          const comments = Array.isArray(mergedData.comments)
+            ? mergedData.comments
+            : Array.isArray(n.data?.comments)
+            ? n.data.comments
+            : [];
+
+          return {
+            ...n,
+            data: {
+              ...mergedData,
+              comments,
+              onChangeLabel: handleChangeLabel,
+              onShowComments: handleShowComments
+            }
+          };
+        })
+      );
+    },
+    [setNodes, handleShowComments]
+  );
+
+  const handleAddComment = useCallback(
+    (nodeId, commentText) => {
+      const text = commentText?.trim();
+      if (!text) return;
+
+      const newComment = {
+        id: getId(),
+        text,
+        createdAt: new Date().toISOString()
+      };
+
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === nodeId
+            ? {
+                ...n,
+                data: {
+                  ...n.data,
+                  comments: [
+                    ...(Array.isArray(n.data?.comments) ? n.data.comments : []),
+                    newComment
+                  ],
+                  onChangeLabel: handleChangeLabel,
+                  onShowComments: handleShowComments
+                }
+              }
+            : n
+        )
+      );
+    },
+    [setNodes, handleChangeLabel, handleShowComments]
+  );
+
+  // --- Handler para agregar un nodo desde el sidebar
+  const handleAddNode = useCallback(
+    async ({ name, time, inCharge, description, color = '#4CAF50', type = 'custom' }) => {
+      const userIP = await getUserIP();
+      const position = { x: 120 + Math.random() * 200, y: 120 + Math.random() * 80 };
+
+      const nodeToAdd =
+        type === 'custom'
+          ? {
+              id: getId(),
+              type: 'custom',
+              position,
+              data: {
+                name,
+                time,
+                inCharge,
+                description,
+                color,
+                ip: userIP,
+                progress: 0,
+                comments: [],
+                onChangeLabel: handleChangeLabel,
+                onShowComments: handleShowComments
+              }
+            }
+          : {
+              id: getId(),
+              // sin `type` => nodo normal por defecto en React Flow
+              position,
+              data: { label: name }
+            };
+
+      setNodes((existingNodes) => [...existingNodes, nodeToAdd]);
+    },
+    [setNodes, getUserIP, handleChangeLabel, handleShowComments]
+  );
+
+  const handleResetFlow = useCallback(() => {
+    setNodes(
+      initialNodes.map((node) =>
+        node.type === 'custom'
+          ? {
+              ...node,
+              data: {
+                ...node.data,
+                comments: Array.isArray(node.data?.comments) ? node.data.comments : [],
+                onChangeLabel: handleChangeLabel,
+                onShowComments: handleShowComments
+              }
+            }
+          : node
   const [editingNodeData, setEditingNodeData] = useState({ 
     name: '', 
     time: '', 
@@ -104,12 +311,25 @@ export default function FlowComponent() {
           : n
       )
     );
-  }, [setNodes]);
+    setEdges(initialEdges);
+    setFeedback('Flujo reseteado.');
+    setTimeout(() => setFeedback(''), 1700);
+  }, [setNodes, setEdges, handleChangeLabel, handleShowComments]);
 
   // Inyectar onChangeLabel en todos los nodos custom
   useEffect(() => {
     setNodes((nds) =>
       nds.map((n) =>
+        n.type === 'custom'
+          ? {
+              ...n,
+              data: {
+                ...n.data,
+                comments: Array.isArray(n.data?.comments) ? n.data.comments : [],
+                onChangeLabel: handleChangeLabel,
+                onShowComments: handleShowComments
+              }
+            }
         n.type === 'custom' 
           ? { ...n, data: { ...n.data, onChangeLabel: handleChangeLabel } } 
           : n
@@ -141,6 +361,8 @@ export default function FlowComponent() {
    * Crear nodo centrado en el canvas
    */
   const createNodeCentered = useCallback(
+    async (label, time = '', inCharge = '', description = '', type = 'custom') => {
+      const userIP = await getUserIP();
     async (label, time = '', inCharge = '', type = 'custom') => {
       const bounds = reactFlowWrapper.current?.getBoundingClientRect();
       let position = { x: 250, y: 150 };
@@ -156,6 +378,28 @@ export default function FlowComponent() {
         });
       }
 
+      const newNode = {
+        id: getId(),
+        type: type === 'custom' ? 'custom' : undefined,
+        position,
+        data:
+          type === 'custom'
+            ? {
+                name: label,
+                time,
+                inCharge,
+                description,
+                color: '#4CAF50',
+                ip: userIP,
+                progress: 0,
+                comments: [],
+                onChangeLabel: handleChangeLabel,
+                onShowComments: handleShowComments
+              }
+            : { label }
+      };
+
+      setNodes((nds) => nds.concat(newNode));
       await nodeOps.createNode({ name: label, time, inCharge, type }, position);
     },
     [nodeOps]
@@ -178,6 +422,8 @@ export default function FlowComponent() {
       name: node.data.name || '', 
       time: node.data.time || '', 
       inCharge: node.data.inCharge || '', 
+      description: node.data.description || '',
+      color: node.data.color || '#4CAF50',
       ip: node.data.ip || '',
       progress: node.data.progress !== undefined ? node.data.progress : 0
     });
@@ -190,6 +436,12 @@ export default function FlowComponent() {
   const closeContextMenu = useCallback(() => {
     setIsContextMenuVisible(false);
     setSelectedNode(null);
+    // Resetear todas las secciones expandidas al cerrar el menú
+    setExpandedSections({
+      description: false,
+      color: false,
+      progress: false
+    });
     setIsDragging(false);
   }, []);
 
@@ -280,6 +532,8 @@ export default function FlowComponent() {
       const nodesForExport = instanceNodes.map((n) => {
         const safeData = { ...n.data };
         if (safeData.onChangeLabel) delete safeData.onChangeLabel;
+        if (safeData.onShowComments) delete safeData.onShowComments;
+        // borrar otras props no serializables si las hubiese
         return { id: n.id, type: n.type, position: n.position, data: safeData };
       });
 
@@ -309,49 +563,33 @@ export default function FlowComponent() {
     }
   }, [nodes, edges, workflowId, showSuccess, showError]);
 
-  // ============================================
-  // Handlers de Edges
-  // ============================================
-  const onEdgeClick = useCallback((event, edge) => {
-    event.preventDefault();
-    setSelectedEdgeId(edge.id);
-  }, []);
-
-  const saveEdgeLabel = useCallback(async (edgeId, newLabel) => {
-    await edgeOps.updateEdgeLabel(edgeId, newLabel);
-  }, [edgeOps]);
-
-  const deleteEdge = useCallback(async (edgeId) => {
-    await edgeOps.deleteEdge(edgeId);
-    setSelectedEdgeId(null);
-  }, [edgeOps]);
-
-  const selectedEdge = edges.find((e) => e.id === selectedEdgeId) ?? null;
-
-  // ============================================
-  // Handlers de ReactFlow
-  // ============================================
-  const onDragOver = useCallback((event) => {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = 'move';
-  }, []);
-
-  const onInit = useCallback((instance) => {
-    reactFlowInstance.current = instance;
-  }, []);
-
-  // ============================================
-  // Drag handlers para menú contextual
-  // ============================================
-  const handleDragStart = useCallback((event) => {
-    event.preventDefault();
-    setIsDragging(true);
-    const rect = reactFlowWrapper.current?.getBoundingClientRect();
-    if (rect) {
-      setDragOffset({ 
-        x: event.clientX - rect.left - contextMenuPosition.x, 
-        y: event.clientY - rect.top - contextMenuPosition.y 
-      });
+  // Actualizar nodo desde menú contextual
+  const updateNodeData = useCallback(async () => {
+    if (selectedNode) {
+      const userIP = await getUserIP();
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === selectedNode.id
+            ? {
+                ...n,
+                data: {
+                  ...n.data,
+                  name: editingNodeData.name,
+                  time: editingNodeData.time,
+                  inCharge: editingNodeData.inCharge,
+                  description: editingNodeData.description,
+                  color: editingNodeData.color || '#4CAF50',
+                  progress: editingNodeData.progress !== undefined ? Math.max(0, Math.min(100, Number(editingNodeData.progress) || 0)) : 0,
+                  ip: userIP, // Actualizar con la IP del usuario que modifica
+                  comments: Array.isArray(n.data?.comments) ? n.data.comments : [],
+                  onChangeLabel: handleChangeLabel,
+                  onShowComments: handleShowComments
+                }
+              }
+            : n
+        )
+      );
+      closeContextMenu();
     }
   }, [contextMenuPosition]);
 
@@ -396,7 +634,67 @@ export default function FlowComponent() {
     };
   }, [isDragging, handleDragMove, handleDragEnd]);
 
-  // ============================================
+  // -------------------------
+  // onInit para capturar instancia
+  // -------------------------
+  const onInit = useCallback((instance) => {
+    reactFlowInstance.current = instance;
+  }, []);
+
+  // -------------------------
+  // Toolbar handlers: zoom, fit, save, export
+  // -------------------------
+  const handleZoomIn = useCallback(() => {
+    if (reactFlowInstance.current?.zoomIn) {
+      reactFlowInstance.current.zoomIn({ duration: 200 });
+    }
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    if (reactFlowInstance.current?.zoomOut) {
+      reactFlowInstance.current.zoomOut({ duration: 200 });
+    }
+  }, []);
+
+  const handleFitView = useCallback(() => {
+    if (reactFlowInstance.current?.fitView) {
+      reactFlowInstance.current.fitView({ padding: 0.2, duration: 200 });
+    }
+  }, []);
+
+  const handleExport = useCallback(() => {
+    try {
+      const instanceNodes = reactFlowInstance?.current?.getNodes?.() ?? nodes;
+
+      const nodesForExport = instanceNodes.map((n) => {
+        const safeData = { ...n.data };
+        if (safeData.onChangeLabel) delete safeData.onChangeLabel;
+        if (safeData.onShowComments) delete safeData.onShowComments;
+        return { id: n.id, type: n.type, position: n.position, data: safeData };
+      });
+
+      const edgesForExport = edges.map((e) => {
+        const { id, source, target, label, type, animated, style } = e;
+        return { id, source, target, label, type, animated, style };
+      });
+
+      const payload = { nodes: nodesForExport, edges: edgesForExport, exportedAt: new Date().toISOString() };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `workflow_${workflowId || 'sin_id'}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setFeedback('Workflow exportado.');
+      setTimeout(() => setFeedback(''), 2200);
+    } catch (err) {
+      console.error('Error exportando workflow:', err);
+      setFeedback('Error al exportar el workflow.');
+    }
+  }, [nodes, edges, workflowId]);
+
+  // -------------------------
   // Render
   // ============================================
   if (isLoading) {
@@ -421,10 +719,13 @@ export default function FlowComponent() {
 
   return (
     <div className="flow-container" style={{ display: 'flex', gap: 8 }}>
-      <FlowSidebar 
-        onAddNode={handleAddNode} 
+      <FlowSidebar
+        onAddNode={handleAddNode}
         onResetFlow={handleResetFlow}
         nodes={nodes}
+        commentNode={commentNode}
+        onAddComment={handleAddComment}
+        onCloseComments={handleCloseComments}
       >
         <hr className="flow-separator" />
         <h4 className="flow-tips-title">Tips</h4>
@@ -462,7 +763,7 @@ export default function FlowComponent() {
               type="button"
               className="toolbar-btn"
               title="Añadir nodo centrado"
-              onClick={() => createNodeCentered('Nuevo nodo', '', '', 'custom')}
+              onClick={() => createNodeCentered('Nuevo nodo', '', '', '', 'custom')}
             >
               (+) Nodo centrado
             </button>
@@ -506,6 +807,7 @@ export default function FlowComponent() {
             </div>
 
             <div className="context-menu-content">
+              {/* Campo fijo: Nombre */}
               <label className="context-menu-label">
                 Nombre:
                 <input 
@@ -513,9 +815,11 @@ export default function FlowComponent() {
                   value={editingNodeData.name} 
                   onChange={(e) => setEditingNodeData(prev => ({ ...prev, name: e.target.value }))} 
                   className="context-menu-input" 
+                  placeholder="Nombre del nodo"
                 />
               </label>
 
+              {/* Campo fijo: Tiempo */}
               <label className="context-menu-label">
                 Tiempo:
                 <input 
@@ -527,6 +831,7 @@ export default function FlowComponent() {
                 />
               </label>
 
+              {/* Campo fijo: Encargado */}
               <label className="context-menu-label">
                 Encargado:
                 <input 
@@ -538,26 +843,92 @@ export default function FlowComponent() {
                 />
               </label>
 
-              <label className="context-menu-label">
-                Progreso (%):
-                <input 
-                  type="number" 
-                  min="0" 
-                  max="100" 
-                  value={editingNodeData.progress !== undefined ? editingNodeData.progress : 0} 
-                  onChange={(e) => setEditingNodeData(prev => ({ ...prev, progress: e.target.value }))} 
-                  className="context-menu-input" 
-                  placeholder="0-100" 
-                />
-              </label>
-            </div>
+              {/* Sección desplegable: Descripción */}
+              <div className="context-menu-accordion">
+                <button 
+                  type="button"
+                  className="context-menu-accordion-header"
+                  onClick={() => toggleSection('description')}
+                >
+                  <span>Descripción del trabajo</span>
+                  <span className="context-menu-accordion-arrow">
+                    {expandedSections.description ? '▼' : '▶'}
+                  </span>
+                </button>
+                {expandedSections.description && (
+                  <div className="context-menu-accordion-content">
+                    <label className="context-menu-label">
+                      <textarea 
+                        value={editingNodeData.description} 
+                        onChange={(e) => setEditingNodeData(prev => ({ ...prev, description: e.target.value }))} 
+                        className="context-menu-input" 
+                        placeholder="Describe el trabajo que se va a realizar..."
+                        rows={4}
+                      />
+                    </label>
+                  </div>
+                )}
+              </div>
 
-            <div className="context-menu-readonly">
-              <div className="context-menu-label">
-                Último modificador:
-                <div className="context-menu-ip-display">
-                  {editingNodeData.ip || 'Sin IP'}
-                </div>
+              {/* Sección desplegable: Color */}
+              <div className="context-menu-accordion">
+                <button 
+                  type="button"
+                  className="context-menu-accordion-header"
+                  onClick={() => toggleSection('color')}
+                >
+                  <span>Color del nodo</span>
+                  <span className="context-menu-accordion-arrow">
+                    {expandedSections.color ? '▼' : '▶'}
+                  </span>
+                </button>
+                {expandedSections.color && (
+                  <div className="context-menu-accordion-content">
+                    <label className="context-menu-label">
+                      <div className="context-menu-color-selector">
+                        {PREDEFINED_COLORS.map((color) => (
+                          <button
+                            key={color.value}
+                            type="button"
+                            className={`context-menu-color-button ${(editingNodeData.color || '#4CAF50') === color.value ? 'active' : ''}`}
+                            style={{ backgroundColor: color.value }}
+                            onClick={() => setEditingNodeData(prev => ({ ...prev, color: color.value }))}
+                            title={color.name}
+                          />
+                        ))}
+                      </div>
+                    </label>
+                  </div>
+                )}
+              </div>
+
+              {/* Sección desplegable: Progreso */}
+              <div className="context-menu-accordion">
+                <button 
+                  type="button"
+                  className="context-menu-accordion-header"
+                  onClick={() => toggleSection('progress')}
+                >
+                  <span>Progreso (%)</span>
+                  <span className="context-menu-accordion-arrow">
+                    {expandedSections.progress ? '▼' : '▶'}
+                  </span>
+                </button>
+                {expandedSections.progress && (
+                  <div className="context-menu-accordion-content">
+                    <label className="context-menu-label">
+                      <input 
+                        type="number" 
+                        min="0" 
+                        max="100" 
+                        value={editingNodeData.progress !== undefined ? editingNodeData.progress : 0} 
+                        onChange={(e) => setEditingNodeData(prev => ({ ...prev, progress: e.target.value }))} 
+                        className="context-menu-input" 
+                        placeholder="0-100" 
+                      />
+                    </label>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -568,6 +939,14 @@ export default function FlowComponent() {
               <button className="context-menu-cancel" onClick={closeContextMenu}>
                 Cancelar
               </button>
+            </div>
+
+            {/* Información de solo lectura - IP (solo en la parte inferior del menú) */}
+            <div className="context-menu-readonly">
+              <div className="context-menu-label">
+                Último modificador:
+                <div className="context-menu-ip-display">{editingNodeData.ip || 'Sin IP'}</div>
+              </div>
             </div>
           </div>
         )}
