@@ -9,7 +9,7 @@
   justify-content: center;         /* Centra horizontalmente */
   align-items: center;             /* Centra verticalmente */
   min-height: 100vh;              /* Altura mínima de toda la ventana */
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);  /* Fondo degradado azul-púrpura */
+  background: #e3f2fd;  /* Fondo azul claro sólido */
   padding: 20px;                   /* Espaciado interno de 20px */
 }
 
