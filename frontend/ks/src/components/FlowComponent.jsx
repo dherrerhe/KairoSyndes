@@ -494,6 +494,7 @@ export default function FlowComponent() {
     try {
       const instanceNodes = reactFlowInstance?.current?.getNodes?.() ?? nodes;
       const { workflowApi } = await import('../api/workflowApi');
+      
       const nodesForSave = instanceNodes.map(n => ({
         id: n.id,
         node_type: n.type || 'default',
@@ -503,9 +504,11 @@ export default function FlowComponent() {
           time: n.data?.time,
           inCharge: n.data?.inCharge,
           ip: n.data?.ip,
-          progress: n.data?.progress !== undefined ? n.data.progress : 0
+          progress: n.data?.progress !== undefined ? n.data.progress : 0,
+          color: n.data?.color || '#4CAF50'  // ✅ AÑADIDO
         }
       }));
+      
       const edgesForSave = edges.map(e => ({
         id: e.id,
         source: e.source,
@@ -517,6 +520,7 @@ export default function FlowComponent() {
           style: e.style || {}
         }
       }));
+      
       await workflowApi.saveWorkflow(workflowId, nodesForSave, edgesForSave);
       showSuccess('Workflow guardado en el servidor.');
     } catch (error) {
@@ -524,6 +528,47 @@ export default function FlowComponent() {
       showError(error.message);
     }
   }, [workflowId, nodes, edges, showSuccess, showError]);
+
+  
+  useEffect(() => {
+    if (!workflowId) return;
+    const autoSaveInterval = setInterval(async () => {
+      try {
+        const instanceNodes = reactFlowInstance?.current?.getNodes?.() ?? nodes;
+        const nodesToSave = instanceNodes
+          .filter(n => !n.id.toString().startsWith('temp-'))
+          .map(n => ({
+            id: parseInt(n.id),
+            position: n.position,
+            data: {
+              name: n.data?.name,
+              time: n.data?.time,
+              inCharge: n.data?.inCharge,
+              progress: n.data?.progress !== undefined ? n.data.progress : 0,
+              ip: n.data?.ip,
+              color: n.data?.color || '#4CAF50'
+            }
+          }));
+        const edgesToSave = edges.map(e => ({
+          id: parseInt(e.id),
+          label: e.label || '',
+          data: {
+            edge_type: e.type || 'default',
+            animated: e.animated || false,
+          }
+        }));
+        if (nodesToSave.length > 0 || edgesToSave.length > 0) {
+          const { workflowApi } = await import('../api/workflowApi');
+          await workflowApi.saveCompleteWorkflow(workflowId, nodesToSave, edgesToSave);
+          console.log('Auto-save: Workflow guardado');
+        }
+      } catch (error) {
+        console.error('Error en auto-save:', error);
+      }
+    }, 30000); // 30 segundos
+  
+    return () => clearInterval(autoSaveInterval);
+  }, [workflowId, nodes, edges]);
 
   const handleExport = useCallback(() => {
     try {
@@ -556,7 +601,7 @@ export default function FlowComponent() {
       showError('Error al exportar.');
     }
   }, [nodes, edges, workflowId, showSuccess, showError]);
-
+  
   // ==========================
   // Guardado automático cada 30 segundos
   // ==========================

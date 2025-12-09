@@ -334,6 +334,7 @@ export const transformNodeFromBackend = (backendNode) => ({
     inCharge: backendNode.data?.inCharge || '',
     ip: backendNode.data?.ip || '',
     progress: backendNode.data?.progress !== undefined ? backendNode.data.progress : 0,
+    color: backendNode.data?.color || '#4CAF50',
   },
 });
 
