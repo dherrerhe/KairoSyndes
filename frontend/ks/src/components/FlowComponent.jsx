@@ -1,32 +1,33 @@
 
-/**
- * FlowComponent.jsx — versión corregida para persistencia y uso correcto de callbacks
- */
+// FlowComponent.jsx
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ReactFlowProvider, useNodesState, useEdgesState } from 'reactflow';
+import { useLocation } from 'react-router-dom';
+
 import 'reactflow/dist/style.css';
+import '../fcStyles/NodeContextMenu.css';
+
 import FlowSidebar from './FlowSidebar';
 import FlowToolbar from './FlowToolbar';
 import FlowCanvas from './FlowCanvas';
 import CustomNode from './CustomNode';
 import EdgeEditorPanel from './EdgeEditorPanel';
-import { useLocation } from 'react-router-dom';
-import {
-  getId,
-} from './flowUtils';
-import '../fcStyles/NodeContextMenu.css';
+import { getId } from './flowUtils';
 
-// Importar hooks personalizados
 import { useWorkflowData } from '../hooks/useWorkflowData';
 import { useNodeOperations } from '../hooks/useNodeOperations';
 import { useEdgeOperations } from '../hooks/useEdgeOperations';
 import { useFeedback, FeedbackDisplay } from '../hooks/useFeedback';
 
-// Definir los tipos de nodos personalizados para React Flow
+// ==========================
+// Constantes y configuración
+// ==========================
+
+// Tipos de nodos para React Flow
 const nodeTypes = { custom: CustomNode };
 
-// Colores predefinidos para los nodos (igual que en FlowSidebar)
+// Paleta de colores predefinida para los nodos
 const PREDEFINED_COLORS = [
   { name: 'Azul', value: '#2196F3' },
   { name: 'Verde', value: '#4CAF50' },
@@ -40,7 +41,7 @@ const PREDEFINED_COLORS = [
   { name: 'Marrón', value: '#795548' }
 ];
 
-// Nodos y edges iniciales de respaldo
+// Estado inicial de nodos y edges (fallback)
 const initialNodes = [
   {
     id: '1',
@@ -58,55 +59,54 @@ const initialNodes = [
 ];
 const initialEdges = [];
 
-// ============================================
+// ==========================
 // Componente Principal
-// ============================================
+// ==========================
 export default function FlowComponent() {
+  // ==========================
+  // Referencias DOM/Instancia
+  // ==========================
   const reactFlowWrapper = useRef(null);
   const reactFlowInstance = useRef(null);
 
+  // ==========================
+  // Params & Hooks de datos
+  // ==========================
   // Obtener workflowId desde querystring
   const location = useLocation();
   const params = new URLSearchParams(location.search);
   const workflowId = params.get('workflowId');
 
-  // ============================================
-  // CUSTOM HOOKS - Toda la lógica de negocio
-  // ============================================
+  // Hook de feedback (mensajes)
   const { feedback, showSuccess, showError } = useFeedback(2000);
 
+  // Hook de datos del workflow y cargado inicial
   const {
     nodes: loadedNodes,
     edges: loadedEdges,
     isLoading,
     loadError,
-    // eslint-disable-next-line 
-    setNodes: setLoadedNodes,
-    // eslint-disable-next-line 
+    isSaving,
+    saveChanges,
+    setNodes: setLoadedNodes, // para uso por hooks, si necesario
     setEdges: setLoadedEdges,
   } = useWorkflowData(workflowId);
 
-  // Estados de ReactFlow (usa los datos cargados)
+  // ==========================
+  // Estado de React Flow
+  // ==========================
   const [nodes, setNodes, onNodesChange] = useNodesState(loadedNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(loadedEdges);
 
-  // Sincronizar nodos/edges cuando se cargan desde el backend
-  useEffect(() => {
-    setNodes(loadedNodes);
-  }, [loadedNodes, setNodes]);
+  // ==========================
+  // Sincronización datos externos con estado
+  // ==========================
+  useEffect(() => setNodes(loadedNodes), [loadedNodes, setNodes]);
+  useEffect(() => setEdges(loadedEdges), [loadedEdges, setEdges]);
 
-  useEffect(() => {
-    setEdges(loadedEdges);
-  }, [loadedEdges, setEdges]);
-
-  // Hook para operaciones de nodos (crear, actualizar, eliminar)
-  const nodeOps = useNodeOperations(workflowId, setNodes, showSuccess, showError);
-  // Hook para operaciones de edges (crear, actualizar, eliminar)
-  const edgeOps = useEdgeOperations(workflowId, setEdges, showSuccess, showError);
-
-  // ============================================
-  // Estados de UI (menú contextual, edges seleccionados)
-  // ============================================
+  // ==========================
+  // Estados UI (menú, edición, otras UI)
+  // ==========================
   const [selectedEdgeId, setSelectedEdgeId] = useState(null);
   const [selectedNode, setSelectedNode] = useState(null);
   const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
@@ -121,29 +121,38 @@ export default function FlowComponent() {
     progress: 0
   });
 
-  // Estados para controlar qué secciones del menú están expandidas (solo las últimas 3)
+  // Control de secciones expandidas del menú contextual
   const [expandedSections, setExpandedSections] = useState({
     description: false,
     color: false,
     progress: false
   });
 
-  // Función para toggle de secciones
-  const toggleSection = useCallback((section) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [section]: !prev[section]
-    }));
-  }, []);
-
-  // Comentarios
+  // Para comentarios en nodos
   const [commentNodeId, setCommentNodeId] = useState(null);
   const commentNode = useMemo(
     () => (commentNodeId ? nodes.find((node) => node.id === commentNodeId) ?? null : null),
     [commentNodeId, nodes]
   );
 
-  // Función para obtener la IP real del usuario
+  // Drag del menú contextual
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+
+  // ==========================
+  // Hooks de lógica de negocio (operaciones nodos/aristas)
+  // ==========================
+  const nodeOps = useNodeOperations(workflowId, setNodes, showSuccess, showError);
+  const edgeOps = useEdgeOperations(workflowId, setEdges, showSuccess, showError);
+
+  // ==========================
+  // Funciones utilitarias UI y lógica
+  // ==========================
+  const toggleSection = useCallback(
+    (section) => setExpandedSections(prev => ({ ...prev, [section]: !prev[section] })),
+    []
+  );
+
   const getUserIP = useCallback(async () => {
     try {
       const response = await fetch('https://api.ipify.org?format=json');
@@ -155,67 +164,22 @@ export default function FlowComponent() {
     }
   }, []);
 
+  // ==========================
+  // Comentarios en nodos
+  // ==========================
   useEffect(() => {
-    if (commentNodeId && !nodes.some((node) => node.id === commentNodeId)) {
-      setCommentNodeId(null);
-    }
+    if (commentNodeId && !nodes.some(node => node.id === commentNodeId)) setCommentNodeId(null);
   }, [nodes, commentNodeId]);
 
-  const handleShowComments = useCallback((nodeId) => {
-    setCommentNodeId(nodeId);
-  }, []);
-
-  const handleCloseComments = useCallback(() => {
-    setCommentNodeId(null);
-  }, []);
-
-  // Dragging context menu
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-
-  // -------------------------
-  // handleChangeLabel (declaro acá; usa setNodes que ya existe)
-  // -------------------------
-  const handleChangeLabel = useCallback(
-    (nodeId, newData) => {
-      setNodes((nds) =>
-        nds.map((n) => {
-          if (n.id !== nodeId) return n;
-          const mergedData = { ...n.data, ...newData };
-          const comments = Array.isArray(mergedData.comments)
-            ? mergedData.comments
-            : Array.isArray(n.data?.comments)
-            ? n.data.comments
-            : [];
-
-          return {
-            ...n,
-            data: {
-              ...mergedData,
-              comments,
-              onChangeLabel: handleChangeLabel,
-              onShowComments: handleShowComments
-            }
-          };
-        })
-      );
-    },
-    [setNodes, handleShowComments]
-  );
-
+  const handleShowComments = useCallback((nodeId) => setCommentNodeId(nodeId), []);
+  const handleCloseComments = useCallback(() => setCommentNodeId(null), []);
   const handleAddComment = useCallback(
     (nodeId, commentText) => {
       const text = commentText?.trim();
       if (!text) return;
-
-      const newComment = {
-        id: getId(),
-        text,
-        createdAt: new Date().toISOString()
-      };
-
-      setNodes((nds) =>
-        nds.map((n) =>
+      const newComment = { id: getId(), text, createdAt: new Date().toISOString() };
+      setNodes(nds =>
+        nds.map(n =>
           n.id === nodeId
             ? {
                 ...n,
@@ -233,15 +197,64 @@ export default function FlowComponent() {
         )
       );
     },
-    [setNodes, handleChangeLabel, handleShowComments]
+    [setNodes]
   );
 
-  // --- Handler para agregar un nodo desde el sidebar
+  // ==========================
+  // Label y propiedades de nodos custom
+  // ==========================
+  const handleChangeLabel = useCallback(
+    (nodeId, newData) => {
+      setNodes(nds =>
+        nds.map(n => {
+          if (n.id !== nodeId) return n;
+          const mergedData = { ...n.data, ...newData };
+          const comments = Array.isArray(mergedData.comments)
+            ? mergedData.comments
+            : Array.isArray(n.data?.comments)
+              ? n.data.comments
+              : [];
+          return {
+            ...n,
+            data: {
+              ...mergedData,
+              comments,
+              onChangeLabel: handleChangeLabel,
+              onShowComments: handleShowComments
+            }
+          };
+        })
+      );
+    },
+    [setNodes]
+  );
+
+  // Inyectar onChangeLabel y onShowComments siempre a nodos custom
+  useEffect(() => {
+    setNodes(nds =>
+      nds.map(n =>
+        n.type === 'custom'
+          ? {
+              ...n,
+              data: {
+                ...n.data,
+                comments: Array.isArray(n.data?.comments) ? n.data.comments : [],
+                onChangeLabel: handleChangeLabel,
+                onShowComments: handleShowComments
+              }
+            }
+          : n
+      )
+    );
+  }, [handleChangeLabel, setNodes, handleShowComments]);
+
+  // ==========================
+  // Funciones para nodos: crear, resetear, añadir centrado, etc.
+  // ==========================
   const handleAddNode = useCallback(
     async ({ name, time, inCharge, description, color = '#4CAF50', type = 'custom' }) => {
       const userIP = await getUserIP();
       const position = { x: 120 + Math.random() * 200, y: 120 + Math.random() * 80 };
-
       const nodeToAdd =
         type === 'custom'
           ? {
@@ -263,19 +276,17 @@ export default function FlowComponent() {
             }
           : {
               id: getId(),
-              // sin `type` => nodo normal por defecto en React Flow
               position,
               data: { label: name }
             };
-
-      setNodes((existingNodes) => [...existingNodes, nodeToAdd]);
+      setNodes(existingNodes => [...existingNodes, nodeToAdd]);
     },
     [setNodes, getUserIP, handleChangeLabel, handleShowComments]
   );
 
   const handleResetFlow = useCallback(() => {
     setNodes(
-      initialNodes.map((node) =>
+      initialNodes.map(node =>
         node.type === 'custom'
           ? {
               ...node,
@@ -294,45 +305,21 @@ export default function FlowComponent() {
     setTimeout(() => showSuccess(''), 1700);
   }, [setNodes, setEdges, handleChangeLabel, handleShowComments, showSuccess]);
 
-  // Inyectar onChangeLabel en todos los nodos custom
-  useEffect(() => {
-    setNodes((nds) =>
-      nds.map((n) =>
-        n.type === 'custom'
-          ? {
-              ...n,
-              data: {
-                ...n.data,
-                comments: Array.isArray(n.data?.comments) ? n.data.comments : [],
-                onChangeLabel: handleChangeLabel,
-                onShowComments: handleShowComments
-              }
-            }
-          : n
-      )
-    );
-  }, [handleChangeLabel, setNodes, handleShowComments]);
-
-  /**
-   * Crear nodo centrado en el canvas
-   */
   const createNodeCentered = useCallback(
     async (label, time = '', inCharge = '', description = '', type = 'custom') => {
       const userIP = await getUserIP();
       const bounds = reactFlowWrapper.current?.getBoundingClientRect();
       let position = { x: 250, y: 150 };
-
       if (bounds && reactFlowInstance.current?.project) {
         const centerClient = {
           x: bounds.left + bounds.width / 2,
-          y: bounds.top + bounds.height / 2
+          y: bounds.top + bounds.height / 2,
         };
         position = reactFlowInstance.current.project({
           x: centerClient.x - bounds.left,
-          y: centerClient.y - bounds.top
+          y: centerClient.y - bounds.top,
         });
       }
-
       const newNode = {
         id: getId(),
         type: type === 'custom' ? 'custom' : undefined,
@@ -353,16 +340,15 @@ export default function FlowComponent() {
               }
             : { label }
       };
-
-      setNodes((nds) => nds.concat(newNode));
+      setNodes(nds => nds.concat(newNode));
       await nodeOps.createNode({ name: label, time, inCharge, type }, position);
     },
     [getUserIP, reactFlowWrapper, reactFlowInstance, setNodes, nodeOps, handleChangeLabel, handleShowComments]
   );
 
-  /**
-   * Handler para click en nodo (abrir menú contextual)
-   */
+  // ==========================
+  // Menú contextual de nodos
+  // ==========================
   const onNodeClick = useCallback((event, node) => {
     event.stopPropagation();
     const rect = reactFlowWrapper.current?.getBoundingClientRect();
@@ -385,13 +371,9 @@ export default function FlowComponent() {
     setIsContextMenuVisible(true);
   }, []);
 
-  /**
-   * Cerrar menú contextual
-   */
   const closeContextMenu = useCallback(() => {
     setIsContextMenuVisible(false);
     setSelectedNode(null);
-    // Resetear todas las secciones expandidas al cerrar el menú
     setExpandedSections({
       description: false,
       color: false,
@@ -400,15 +382,11 @@ export default function FlowComponent() {
     setIsDragging(false);
   }, []);
 
-  /**
-   * Actualizar nodo desde menú contextual
-   */
   const updateNodeData = useCallback(async () => {
     if (!selectedNode) return;
-
     const userIP = await getUserIP();
-    setNodes((nds) =>
-      nds.map((n) =>
+    setNodes(nds =>
+      nds.map(n =>
         n.id === selectedNode.id
           ? {
               ...n,
@@ -433,11 +411,21 @@ export default function FlowComponent() {
       )
     );
     closeContextMenu();
-  }, [selectedNode, editingNodeData, closeContextMenu, getUserIP, setNodes, handleChangeLabel, handleShowComments]);
+  }, [
+    selectedNode,
+    editingNodeData,
+    closeContextMenu,
+    getUserIP,
+    setNodes,
+    handleChangeLabel,
+    handleShowComments
+  ]);
 
-  // Drag for context menu
+  // ==========================
+  // Drag & efecto del menú contextual
+  // ==========================
   const handleDragMove = useCallback(
-    (event) => {
+    event => {
       if (!isDragging) return;
       const rect = reactFlowWrapper.current?.getBoundingClientRect();
       if (rect) {
@@ -453,14 +441,10 @@ export default function FlowComponent() {
     },
     [isDragging, dragOffset]
   );
-
   const handleDragEnd = useCallback(() => setIsDragging(false), []);
 
-  // ============================================
-  // Effects para menú contextual
-  // ============================================
   useEffect(() => {
-    const handleClickOutside = (event) => {
+    const handleClickOutside = event => {
       if (isContextMenuVisible && !event.target.closest('.node-context-menu')) {
         closeContextMenu();
       }
@@ -480,48 +464,37 @@ export default function FlowComponent() {
     };
   }, [isDragging, handleDragMove, handleDragEnd]);
 
-  // -------------------------
-  // onInit para capturar instancia
-  // -------------------------
-  const onInit = useCallback((instance) => {
+  // ==========================
+  // Toolbar: zoom, fit, save, export
+  // ==========================
+  const onInit = useCallback(instance => {
     reactFlowInstance.current = instance;
   }, []);
-
-  // -------------------------
-  // Toolbar handlers: zoom, fit, save, export
-  // -------------------------
   const handleZoomIn = useCallback(() => {
     if (reactFlowInstance.current?.zoomIn) {
       reactFlowInstance.current.zoomIn({ duration: 200 });
     }
   }, []);
-
   const handleZoomOut = useCallback(() => {
     if (reactFlowInstance.current?.zoomOut) {
       reactFlowInstance.current.zoomOut({ duration: 200 });
     }
   }, []);
-
   const handleFitView = useCallback(() => {
     if (reactFlowInstance.current?.fitView) {
       reactFlowInstance.current.fitView({ padding: 0.2, duration: 200 });
     }
   }, []);
 
-  /**
-   * Guardar workflow completo en el backend
-   */
   const saveWorkflowToBackend = useCallback(async () => {
     if (!workflowId) {
       showError('No hay workflowId definido.');
       return;
     }
-
     try {
       const instanceNodes = reactFlowInstance?.current?.getNodes?.() ?? nodes;
       const { workflowApi } = await import('../api/workflowApi');
-
-      const nodesForSave = instanceNodes.map((n) => ({
+      const nodesForSave = instanceNodes.map(n => ({
         id: n.id,
         node_type: n.type || 'default',
         position: n.position,
@@ -533,8 +506,7 @@ export default function FlowComponent() {
           progress: n.data?.progress !== undefined ? n.data.progress : 0
         }
       }));
-
-      const edgesForSave = edges.map((e) => ({
+      const edgesForSave = edges.map(e => ({
         id: e.id,
         source: e.source,
         target: e.target,
@@ -545,7 +517,6 @@ export default function FlowComponent() {
           style: e.style || {}
         }
       }));
-
       await workflowApi.saveWorkflow(workflowId, nodesForSave, edgesForSave);
       showSuccess('Workflow guardado en el servidor.');
     } catch (error) {
@@ -554,32 +525,24 @@ export default function FlowComponent() {
     }
   }, [workflowId, nodes, edges, showSuccess, showError]);
 
-  /**
-   * Exportar workflow a JSON
-   */
   const handleExport = useCallback(() => {
     try {
       const instanceNodes = reactFlowInstance?.current?.getNodes?.() ?? nodes;
-
-      const nodesForExport = instanceNodes.map((n) => {
+      const nodesForExport = instanceNodes.map(n => {
         const safeData = { ...n.data };
-        if (safeData.onChangeLabel) delete safeData.onChangeLabel;
-        if (safeData.onShowComments) delete safeData.onShowComments;
-        // borrar otras props no serializables si las hubiese
+        delete safeData.onChangeLabel;
+        delete safeData.onShowComments;
         return { id: n.id, type: n.type, position: n.position, data: safeData };
       });
-
-      const edgesForExport = edges.map((e) => {
+      const edgesForExport = edges.map(e => {
         const { id, source, target, label, type, animated, style } = e;
         return { id, source, target, label, type, animated, style };
       });
-
       const payload = {
         nodes: nodesForExport,
         edges: edgesForExport,
         exportedAt: new Date().toISOString()
       };
-
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -587,7 +550,6 @@ export default function FlowComponent() {
       a.download = `workflow_${workflowId || 'sin_id'}.json`;
       a.click();
       URL.revokeObjectURL(url);
-
       showSuccess('Workflow exportado.');
     } catch (err) {
       console.error('Error exportando:', err);
@@ -595,55 +557,51 @@ export default function FlowComponent() {
     }
   }, [nodes, edges, workflowId, showSuccess, showError]);
 
-  // ============================================
-// Auto-save: Guardar cambios cada 30 segundos
-// ============================================
-useEffect(() => {
-  if (!workflowId) return;
-
-  const autoSaveInterval = setInterval(async () => {
-    try {
-      const instanceNodes = reactFlowInstance?.current?.getNodes?.() ?? nodes;
-      const nodesToSave = instanceNodes
-        .filter(n => !n.id.toString().startsWith('temp-')) // Excluir nodos temporales
-        .map(n => ({
-          id: parseInt(n.id),
-          position: n.position,
+  // ==========================
+  // Guardado automático cada 30 segundos
+  // ==========================
+  useEffect(() => {
+    if (!workflowId) return;
+    const autoSaveInterval = setInterval(async () => {
+      try {
+        const instanceNodes = reactFlowInstance?.current?.getNodes?.() ?? nodes;
+        const nodesToSave = instanceNodes
+          .filter(n => !n.id.toString().startsWith('temp-'))
+          .map(n => ({
+            id: parseInt(n.id),
+            position: n.position,
+            data: {
+              name: n.data?.name,
+              time: n.data?.time,
+              inCharge: n.data?.inCharge,
+              progress: n.data?.progress !== undefined ? n.data.progress : 0,
+              ip: n.data?.ip,
+            }
+          }));
+        const edgesToSave = edges.map(e => ({
+          id: parseInt(e.id),
+          label: e.label || '',
           data: {
-            name: n.data?.name,
-            time: n.data?.time,
-            inCharge: n.data?.inCharge,
-            progress: n.data?.progress !== undefined ? n.data.progress : 0,
-            ip: n.data?.ip,
+            edge_type: e.type || 'default',
+            animated: e.animated || false,
           }
         }));
-
-      const edgesToSave = edges.map(e => ({
-        id: parseInt(e.id),
-        label: e.label || '',
-        data: {
-          edge_type: e.type || 'default',
-          animated: e.animated || false,
+        if (nodesToSave.length > 0 || edgesToSave.length > 0) {
+          const { workflowApi } = await import('../api/workflowApi');
+          await workflowApi.saveCompleteWorkflow(workflowId, nodesToSave, edgesToSave);
+          console.log('Auto-save: Workflow guardado');
         }
-      }));
-
-      if (nodesToSave.length > 0 || edgesToSave.length > 0) {
-        const { workflowApi } = await import('../api/workflowApi');
-        await workflowApi.saveCompleteWorkflow(workflowId, nodesToSave, edgesToSave);
-        console.log('✅ Auto-save: Workflow guardado');
+      } catch (error) {
+        console.error('Error en auto-save:', error);
       }
-    } catch (error) {
-      console.error('❌ Error en auto-save:', error);
-    }
-  }, 30000); // 30 segundos
+    }, 30000); // 30 segundos
 
-  return () => clearInterval(autoSaveInterval);
-}, [workflowId, nodes, edges]);
-  
-  
-  // -------------------------
-  // Render
-  // ============================================
+    return () => clearInterval(autoSaveInterval);
+  }, [workflowId, nodes, edges]);
+
+  // ==========================
+  // Renderizado UI principal
+  // ==========================
   if (isLoading) {
     return (
       <div className="flow-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
@@ -681,10 +639,13 @@ useEffect(() => {
           <li>Conecta nodos arrastrando desde un handle</li>
           <li>Selecciona una arista para editarla</li>
         </ul>
-        {/* (edge editor logic omitted; you may want to restore as per need) */}
       </FlowSidebar>
 
-      <div ref={reactFlowWrapper} className="flow-canvas-container" style={{ flex: 1, position: 'relative' }}>
+      <div
+        ref={reactFlowWrapper}
+        className="flow-canvas-container"
+        style={{ flex: 1, position: 'relative' }}
+      >
         <FlowToolbar
           onZoomIn={handleZoomIn}
           onZoomOut={handleZoomOut}
@@ -704,7 +665,7 @@ useEffect(() => {
           style={{ position: 'absolute', top: 8, left: 8, zIndex: 5, background: 'transparent', padding: 0 }}
         />
 
-        {/* Componente de Feedback usando el hook */}
+        {/* Feedback de acciones */}
         <FeedbackDisplay feedback={feedback} />
 
         <FlowCanvas
@@ -720,7 +681,7 @@ useEffect(() => {
           onInit={onInit}
         />
 
-        {/* Menú Contextual para editar nodos */}
+        {/* Menú contextual de edición de nodo */}
         {isContextMenuVisible && (
           <div
             className="node-context-menu"
@@ -740,43 +701,41 @@ useEffect(() => {
             </div>
 
             <div className="context-menu-content">
-              {/* Campo fijo: Nombre */}
+              {/* Campo: Nombre */}
               <label className="context-menu-label">
                 Nombre:
                 <input
                   type="text"
                   value={editingNodeData.name}
-                  onChange={(e) => setEditingNodeData(prev => ({ ...prev, name: e.target.value }))}
+                  onChange={e => setEditingNodeData(prev => ({ ...prev, name: e.target.value }))}
                   className="context-menu-input"
                   placeholder="Nombre del nodo"
                 />
               </label>
-
-              {/* Campo fijo: Tiempo */}
+              {/* Campo: Tiempo */}
               <label className="context-menu-label">
                 Tiempo:
                 <input
                   type="text"
                   value={editingNodeData.time}
-                  onChange={(e) => setEditingNodeData(prev => ({ ...prev, time: e.target.value }))}
+                  onChange={e => setEditingNodeData(prev => ({ ...prev, time: e.target.value }))}
                   className="context-menu-input"
                   placeholder="ej: 2h, 30min"
                 />
               </label>
-
-              {/* Campo fijo: Encargado */}
+              {/* Campo: Encargado */}
               <label className="context-menu-label">
                 Encargado:
                 <input
                   type="text"
                   value={editingNodeData.inCharge}
-                  onChange={(e) => setEditingNodeData(prev => ({ ...prev, inCharge: e.target.value }))}
+                  onChange={e => setEditingNodeData(prev => ({ ...prev, inCharge: e.target.value }))}
                   className="context-menu-input"
                   placeholder="Nombre del responsable"
                 />
               </label>
 
-              {/* Sección desplegable: Descripción */}
+              {/* Desplegable: Descripción */}
               <div className="context-menu-accordion">
                 <button
                   type="button"
@@ -793,7 +752,7 @@ useEffect(() => {
                     <label className="context-menu-label">
                       <textarea
                         value={editingNodeData.description}
-                        onChange={(e) => setEditingNodeData(prev => ({ ...prev, description: e.target.value }))}
+                        onChange={e => setEditingNodeData(prev => ({ ...prev, description: e.target.value }))}
                         className="context-menu-input"
                         placeholder="Describe el trabajo que se va a realizar..."
                         rows={4}
@@ -803,7 +762,7 @@ useEffect(() => {
                 )}
               </div>
 
-              {/* Sección desplegable: Color */}
+              {/* Desplegable: Color */}
               <div className="context-menu-accordion">
                 <button
                   type="button"
@@ -819,7 +778,7 @@ useEffect(() => {
                   <div className="context-menu-accordion-content">
                     <label className="context-menu-label">
                       <div className="context-menu-color-selector">
-                        {PREDEFINED_COLORS.map((color) => (
+                        {PREDEFINED_COLORS.map(color => (
                           <button
                             key={color.value}
                             type="button"
@@ -835,7 +794,7 @@ useEffect(() => {
                 )}
               </div>
 
-              {/* Sección desplegable: Progreso */}
+              {/* Desplegable: Progreso */}
               <div className="context-menu-accordion">
                 <button
                   type="button"
@@ -855,7 +814,7 @@ useEffect(() => {
                         min="0"
                         max="100"
                         value={editingNodeData.progress !== undefined ? editingNodeData.progress : 0}
-                        onChange={(e) => setEditingNodeData(prev => ({ ...prev, progress: e.target.value }))}
+                        onChange={e => setEditingNodeData(prev => ({ ...prev, progress: e.target.value }))}
                         className="context-menu-input"
                         placeholder="0-100"
                       />
@@ -866,19 +825,16 @@ useEffect(() => {
             </div>
 
             <div className="context-menu-actions">
-              <button className="context-menu-save" onClick={updateNodeData}>
-                Guardar
-              </button>
-              <button className="context-menu-cancel" onClick={closeContextMenu}>
-                Cancelar
-              </button>
+              <button className="context-menu-save" onClick={updateNodeData}>Guardar</button>
+              <button className="context-menu-cancel" onClick={closeContextMenu}>Cancelar</button>
             </div>
 
-            {/* Información de solo lectura - IP (solo en la parte inferior del menú) */}
             <div className="context-menu-readonly">
               <div className="context-menu-label">
                 Último modificador:
-                <div className="context-menu-ip-display">{editingNodeData.ip || 'Sin IP'}</div>
+                <div className="context-menu-ip-display">
+                  {editingNodeData.ip || 'Sin IP'}
+                </div>
               </div>
             </div>
           </div>
@@ -888,7 +844,9 @@ useEffect(() => {
   );
 }
 
-// Wrapper con provider
+// ===============================
+// Wrapper: ReactFlowProvider
+// ===============================
 export function FlowComponentWithProvider(props) {
   return (
     <ReactFlowProvider>

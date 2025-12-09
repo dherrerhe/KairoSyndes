@@ -145,7 +145,7 @@ class WorkflowListCreateView(APIView):
         # No agregar owner al data, el serializer lo hará automáticamente
         serializer = WorkflowSerializer(
             data=request.data,
-            context={'request': request}  # ← AGREGAR CONTEXT
+            context={'request': request} 
         )
 
         if serializer.is_valid():
@@ -179,23 +179,79 @@ class WorkflowDetailView(APIView):
             )
 
     def patch(self, request, pk):
-        """Actualiza un workflow parcialmente"""
+        """Actualiza un workflow (solo si es propietario)"""
         try:
-            workflow = Workflow.objects.get(pk=pk)
-            serializer = WorkflowSerializer(workflow, data=request.data, partial=True)
+            workflow = Workflow.objects.get(pk=pk, owner=request.user)
+            
+            # Obtener datos del request
+            data = request.data.copy()
+            
+            # Si vienen nodos en el request, procesarlos
+            nodes_data = data.pop('nodes', None)
+            edges_data = data.pop('edges', None)
+            
+            # Actualizar campos básicos del workflow
+            serializer = WorkflowSerializer(workflow, data=data, partial=True)
             
             if serializer.is_valid():
-                serializer.save()
+                # Guardar workflow
+                workflow = serializer.save()
+                
+                # Guardar nodos si vienen en el request
+                if nodes_data is not None:
+                    for node_data in nodes_data:
+                        node_id = node_data.get('id')
+                        if node_id:
+                            try:
+                                node = Node.objects.get(id=node_id, workflow=workflow)
+                                # Actualizar posición y datos
+                                node.position = node_data.get('position', node.position)
+                                node.data = node_data.get('data', node.data)
+                                node.node_type = node_data.get('node_type', node.node_type)
+                                node.save()
+                            except Node.DoesNotExist:
+                                # Crear nodo si no existe
+                                Node.objects.create(
+                                    workflow=workflow,
+                                    id=node_id,
+                                    position=node_data.get('position', {}),
+                                    data=node_data.get('data', {}),
+                                    node_type=node_data.get('node_type', 'custom')
+                                )
+                
+                # Guardar edges si vienen en el request
+                if edges_data is not None:
+                    for edge_data in edges_data:
+                        edge_id = edge_data.get('id')
+                        if edge_id:
+                            try:
+                                edge = Edge.objects.get(id=edge_id, workflow=workflow)
+                                edge.label = edge_data.get('label', edge.label)
+                                edge.data = edge_data.get('data', edge.data)
+                                edge.save()
+                            except Edge.DoesNotExist:
+                                # Crear edge si no existe
+                                Edge.objects.create(
+                                    workflow=workflow,
+                                    id=edge_id,
+                                    source_id=edge_data.get('source'),
+                                    target_id=edge_data.get('target'),
+                                    label=edge_data.get('label', ''),
+                                    data=edge_data.get('data', {})
+                                )
+                
+                # Retornar workflow actualizado con nodos y edges
+                workflow_serialized = WorkflowSerializer(workflow, context={'request': request})
                 return Response(
-                    {"message": "Workflow actualizado.", "workflow": serializer.data},
+                    {"message": "Workflow actualizado.", "workflow": workflow_serialized.data},
                     status=status.HTTP_200_OK
                 )
             
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except Workflow.DoesNotExist:
             return Response(
-                {"error": "Workflow no encontrado"},
-                status=status.HTTP_404_NOT_FOUND
+                {"error": "Workflow no encontrado o no tienes permiso"},
+                status=status.HTTP_403_FORBIDDEN
             )
 
     def delete(self, request, pk):
