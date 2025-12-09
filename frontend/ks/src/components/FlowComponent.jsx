@@ -595,6 +595,52 @@ export default function FlowComponent() {
     }
   }, [nodes, edges, workflowId, showSuccess, showError]);
 
+  // ============================================
+// Auto-save: Guardar cambios cada 30 segundos
+// ============================================
+useEffect(() => {
+  if (!workflowId) return;
+
+  const autoSaveInterval = setInterval(async () => {
+    try {
+      const instanceNodes = reactFlowInstance?.current?.getNodes?.() ?? nodes;
+      const nodesToSave = instanceNodes
+        .filter(n => !n.id.toString().startsWith('temp-')) // Excluir nodos temporales
+        .map(n => ({
+          id: parseInt(n.id),
+          position: n.position,
+          data: {
+            name: n.data?.name,
+            time: n.data?.time,
+            inCharge: n.data?.inCharge,
+            progress: n.data?.progress !== undefined ? n.data.progress : 0,
+            ip: n.data?.ip,
+          }
+        }));
+
+      const edgesToSave = edges.map(e => ({
+        id: parseInt(e.id),
+        label: e.label || '',
+        data: {
+          edge_type: e.type || 'default',
+          animated: e.animated || false,
+        }
+      }));
+
+      if (nodesToSave.length > 0 || edgesToSave.length > 0) {
+        const { workflowApi } = await import('../api/workflowApi');
+        await workflowApi.saveCompleteWorkflow(workflowId, nodesToSave, edgesToSave);
+        console.log('✅ Auto-save: Workflow guardado');
+      }
+    } catch (error) {
+      console.error('❌ Error en auto-save:', error);
+    }
+  }, 30000); // 30 segundos
+
+  return () => clearInterval(autoSaveInterval);
+}, [workflowId, nodes, edges]);
+  
+  
   // -------------------------
   // Render
   // ============================================

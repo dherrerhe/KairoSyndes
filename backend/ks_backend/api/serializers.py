@@ -77,8 +77,16 @@ class EdgeSerializer(serializers.ModelSerializer):
 class WorkflowSerializer(serializers.ModelSerializer):
     nodes = NodeSerializer(many=True, read_only=True)
     edges = EdgeSerializer(many=True, read_only=True)
+    owner = serializers.StringRelatedField(read_only=True)  # Read-only
     
     class Meta:
         model = Workflow
-        fields = ['id', 'name', 'data', 'created_at', 'nodes', 'edges']
-        read_only_fields = ['id', 'created_at', 'nodes', 'edges']
+        fields = ['id', 'name', 'owner', 'data', 'created_at', 'nodes', 'edges']
+        read_only_fields = ['id', 'created_at', 'owner', 'nodes', 'edges']
+    
+    def create(self, validated_data):
+        """Auto-asigna el usuario autenticado como owner"""
+        request = self.context.get('request')
+        if request and hasattr(request, 'user'):
+            validated_data['owner'] = request.user
+        return super().create(validated_data)

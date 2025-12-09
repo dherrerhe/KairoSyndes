@@ -10,6 +10,8 @@ from .views import (
     NodeDetailView,
     EdgeListCreateView,
     EdgeDetailView,
+    NodeBulkUpdateView,
+    EdgeBulkUpdateView,
 )
 
 
@@ -29,4 +31,8 @@ urlpatterns = [
     # Edges
     path('workflows/<int:workflow_id>/edges/', EdgeListCreateView.as_view(), name="edges-list-create"),
     path('workflows/<int:workflow_id>/edges/<int:edge_id>/', EdgeDetailView.as_view(), name="edge-detail"),
+
+    # (Bulk Update)
+    path('workflows/<int:workflow_id>/nodes/bulk-update/', NodeBulkUpdateView.as_view(), name="nodes-bulk-update"),
+    path('workflows/<int:workflow_id>/edges/bulk-update/', EdgeBulkUpdateView.as_view(), name="edges-bulk-update"),
 ]

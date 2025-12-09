@@ -135,22 +135,26 @@ class WorkflowListCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        """Lista todos los workflows"""
-        workflows = Workflow.objects.all().order_by('-created_at')
-        serializer = WorkflowSerializer(workflows, many=True)
+        """Lista workflows del usuario autenticado"""
+        workflows = Workflow.objects.filter(owner=request.user).order_by('-created_at')
+        serializer = WorkflowSerializer(workflows, many=True, context={'request': request})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request):
-        """Crea un nuevo workflow"""
-        serializer = WorkflowSerializer(data=request.data)
+        """Crea un nuevo workflow con el usuario como owner"""
+        # No agregar owner al data, el serializer lo hará automáticamente
+        serializer = WorkflowSerializer(
+            data=request.data,
+            context={'request': request}  # ← AGREGAR CONTEXT
+        )
 
         if serializer.is_valid():
-            serializer.save()
+            serializer.save()  # ← El serializer.create() asignará owner automáticamente
             return Response(
                 {"message": "Workflow creado correctamente.", "workflow": serializer.data},
                 status=status.HTTP_201_CREATED
             )
-        
+    
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -401,3 +405,83 @@ class EdgeDetailView(APIView):
                 {"error": "Edge no encontrado"},
                 status=status.HTTP_404_NOT_FOUND
             )
+
+
+# ============================================
+# Bulk Update de Nodos y Edges
+# ============================================
+
+class NodeBulkUpdateView(APIView):
+    """Actualizar múltiples nodos a la vez (para auto-save)"""
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, workflow_id):
+        """Actualiza múltiples nodos"""
+        try:
+            workflow = Workflow.objects.get(pk=workflow_id, owner=request.user)
+        except Workflow.DoesNotExist:
+            return Response(
+                {"error": "Workflow no encontrado"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        nodes_data = request.data.get('nodes', [])
+        updated_nodes = []
+
+        for node_data in nodes_data:
+            node_id = node_data.get('id')
+            try:
+                node = Node.objects.get(pk=node_id, workflow=workflow)
+                # Actualizar posición
+                if 'position' in node_data:
+                    node.position = node_data['position']
+                # Actualizar datos
+                if 'data' in node_data:
+                    node.data = node_data['data']
+                node.save()
+                updated_nodes.append(NodeSerializer(node).data)
+            except Node.DoesNotExist:
+                continue
+
+        return Response(
+            {"message": f"{len(updated_nodes)} nodos actualizados", "nodes": updated_nodes},
+            status=status.HTTP_200_OK
+        )
+
+
+class EdgeBulkUpdateView(APIView):
+    """Actualizar múltiples edges a la vez (para auto-save)"""
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, workflow_id):
+        """Actualiza múltiples edges"""
+        try:
+            workflow = Workflow.objects.get(pk=workflow_id, owner=request.user)
+        except Workflow.DoesNotExist:
+            return Response(
+                {"error": "Workflow no encontrado"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        edges_data = request.data.get('edges', [])
+        updated_edges = []
+
+        for edge_data in edges_data:
+            edge_id = edge_data.get('id')
+            try:
+                edge = Edge.objects.get(pk=edge_id, workflow=workflow)
+                # Actualizar label
+                if 'label' in edge_data:
+                    edge.label = edge_data['label']
+                # Actualizar datos
+                if 'data' in edge_data:
+                    edge.data = edge_data['data']
+                edge.save()
+                updated_edges.append(EdgeSerializer(edge).data)
+            except Edge.DoesNotExist:
+                continue
+
+        return Response(
+            {"message": f"{len(updated_edges)} edges actualizados", "edges": updated_edges},
+            status=status.HTTP_200_OK
+        )            

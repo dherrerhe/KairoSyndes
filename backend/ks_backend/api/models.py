@@ -233,11 +233,12 @@ class User(AbstractUser):
 
 class Workflow(models.Model):
     name = models.CharField(max_length=255, default="Untitled Workflow")
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='workflows', default=1)
     data = models.JSONField()
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return self.name
+        return f"{self.name} (by {self.owner.nickname})"
     
     class Meta:
         verbose_name = "Workflow"

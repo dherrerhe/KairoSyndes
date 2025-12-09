@@ -243,35 +243,80 @@ export const workflowApi = {
     });
   },
 
-  // ============================================
-  // BATCH OPERATIONS (Operaciones por lote)
-  // ============================================
+// ============================================
+// BATCH OPERATIONS (Operaciones por lote - Auto-save)
+// ============================================
 
-  /**
-   * Actualizar múltiples nodos a la vez
-   * @param {string|number} workflowId - ID del workflow
-   * @param {Array} nodesData - Array de {id, ...data}
-   * @returns {Promise<Array>} Nodos actualizados
-   */
-  batchUpdateNodes: async (workflowId, nodesData) => {
-    return await apiCall(`/workflows/${workflowId}/nodes/batch/`, {
-      method: 'PATCH',
-      body: JSON.stringify({ nodes: nodesData }),
-    });
-  },
+/**
+ * Actualizar múltiples nodos a la vez (para auto-save)
+ * @param {string|number} workflowId - ID del workflow
+ * @param {Array} nodes - Array de nodos con cambios
+ * @returns {Promise<Object>} Nodos actualizados
+ */
+bulkUpdateNodes: async (workflowId, nodes) => {
+  return await apiCall(`/workflows/${workflowId}/nodes/bulk-update/`, {
+    method: 'PATCH',
+    body: JSON.stringify({ nodes }),
+  });
+},
 
-  /**
-   * Eliminar múltiples nodos a la vez
-   * @param {string|number} workflowId - ID del workflow
-   * @param {Array} nodeIds - Array de IDs de nodos
-   * @returns {Promise<null>}
-   */
-  batchDeleteNodes: async (workflowId, nodeIds) => {
-    return await apiCall(`/workflows/${workflowId}/nodes/batch/`, {
-      method: 'DELETE',
-      body: JSON.stringify({ node_ids: nodeIds }),
-    });
-  },
+/**
+ * Actualizar múltiples edges a la vez (para auto-save)
+ * @param {string|number} workflowId - ID del workflow
+ * @param {Array} edges - Array de edges con cambios
+ * @returns {Promise<Object>} Edges actualizados
+ */
+bulkUpdateEdges: async (workflowId, edges) => {
+  return await apiCall(`/workflows/${workflowId}/edges/bulk-update/`, {
+    method: 'PATCH',
+    body: JSON.stringify({ edges }),
+  });
+},
+
+/**
+ * Guardar el workflow completo (nodos + edges)
+ * @param {string|number} workflowId - ID del workflow
+ * @param {Array} nodes - Array de nodos
+ * @param {Array} edges - Array de edges
+ * @returns {Promise<Object>} Respuesta del servidor
+ */
+saveCompleteWorkflow: async (workflowId, nodes, edges) => {
+  try {
+    // Guardar nodos
+    if (nodes.length > 0) {
+      const nodesToSave = nodes.map(n => ({
+        id: parseInt(n.id),
+        position: n.position,
+        data: {
+          name: n.data?.name,
+          time: n.data?.time,
+          inCharge: n.data?.inCharge,
+          progress: n.data?.progress !== undefined ? n.data.progress : 0,
+          ip: n.data?.ip,
+        }
+      }));
+      await workflowApi.bulkUpdateNodes(workflowId, nodesToSave);
+    }
+
+    // Guardar edges
+    if (edges.length > 0) {
+      const edgesToSave = edges.map(e => ({
+        id: parseInt(e.id),
+        label: e.label || '',
+        data: {
+          edge_type: e.type || 'default',
+          animated: e.animated || false,
+        }
+      }));
+      await workflowApi.bulkUpdateEdges(workflowId, edgesToSave);
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error guardando workflow:', error);
+    throw error;
+  }
+},
 };
 
 /**
@@ -297,15 +342,17 @@ export const transformNodeFromBackend = (backendNode) => ({
  * @param {Object} backendEdge - Edge desde Django
  * @returns {Object} Edge formato ReactFlow
  */
-export const transformEdgeFromBackend = (backendEdge) => ({
-  id: backendEdge.id.toString(),
-  source: (backendEdge.source?.id || backendEdge.source).toString(),
-  target: (backendEdge.target?.id || backendEdge.target).toString(),
-  label: backendEdge.label || '',
-  type: backendEdge.data?.edge_type || 'default',
-  animated: backendEdge.data?.animated || false,
-  style: backendEdge.data?.style || {},
-});
+export function transformEdgeFromBackend(backendEdge) {
+  return {
+    id: backendEdge.id.toString(),
+    source: (backendEdge.source?.id || backendEdge.source).toString(),
+    target: (backendEdge.target?.id || backendEdge.target).toString(),
+    label: backendEdge.label || '',
+    type: backendEdge.data?.edge_type || 'default',
+    animated: backendEdge.data?.animated || false,
+    style: backendEdge.data?.style || {},
+  };
+}
 
 /**
  * Helper para transformar nodo de ReactFlow al formato backend
@@ -313,19 +360,21 @@ export const transformEdgeFromBackend = (backendEdge) => ({
  * @param {number} workflowId - ID del workflow
  * @returns {Object} Nodo formato Django
  */
-export const transformNodeToBackend = (reactFlowNode, workflowId) => ({
-  workflow: parseInt(workflowId),
-  node_type: reactFlowNode.type || 'default',
-  name: reactFlowNode.data.name || reactFlowNode.data.label || 'Sin nombre',
-  position: reactFlowNode.position,
-  data: {
-    name: reactFlowNode.data.name,
-    time: reactFlowNode.data.time,
-    inCharge: reactFlowNode.data.inCharge,
-    ip: reactFlowNode.data.ip,
-    progress: reactFlowNode.data.progress !== undefined ? reactFlowNode.data.progress : 0,
-  },
-});
+export function transformNodeToBackend(reactFlowNode, workflowId) {
+  return {
+    workflow: parseInt(workflowId),
+    node_type: reactFlowNode.type || 'default',
+    name: reactFlowNode.data.name || reactFlowNode.data.label || 'Sin nombre',
+    position: reactFlowNode.position,
+    data: {
+      name: reactFlowNode.data.name,
+      time: reactFlowNode.data.time,
+      inCharge: reactFlowNode.data.inCharge,
+      ip: reactFlowNode.data.ip,
+      progress: reactFlowNode.data.progress !== undefined ? reactFlowNode.data.progress : 0,
+    },
+  };
+}
 
 /**
  * Helper para transformar edge de ReactFlow al formato backend
@@ -333,12 +382,14 @@ export const transformNodeToBackend = (reactFlowNode, workflowId) => ({
  * @param {number} workflowId - ID del workflow
  * @returns {Object} Edge formato Django
  */
-export const transformEdgeToBackend = (reactFlowEdge, workflowId) => ({
-  workflow: parseInt(workflowId),
-  source_node: parseInt(reactFlowEdge.source),
-  target_node: parseInt(reactFlowEdge.target),
-  edge_type: reactFlowEdge.type || 'default',
-  label: reactFlowEdge.label || '',
-  animated: reactFlowEdge.animated || false,
-  style: reactFlowEdge.style || {},
-});
+export function transformEdgeToBackend(reactFlowEdge, workflowId) {
+  return {
+    workflow: parseInt(workflowId),
+    source_node: parseInt(reactFlowEdge.source),
+    target_node: parseInt(reactFlowEdge.target),
+    edge_type: reactFlowEdge.type || 'default',
+    label: reactFlowEdge.label || '',
+    animated: reactFlowEdge.animated || false,
+    style: reactFlowEdge.style || {},
+  };
+}
