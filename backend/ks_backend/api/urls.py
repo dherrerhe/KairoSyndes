@@ -1,7 +1,9 @@
 # api/urls.py
+
 from django.urls import path
 from .views import (
     LoginView,
+    RegisterView,
     WorkflowListCreateView,
     WorkflowDetailView,
     NodeListCreateView,
@@ -10,9 +12,11 @@ from .views import (
     EdgeDetailView,
 )
 
+
 urlpatterns = [
-    # Login
+    # Auth
     path('login/', LoginView.as_view(), name="api-login"),
+    path('register/', RegisterView.as_view(), name="api-register"),
     
     # Workflows
     path('workflows/', WorkflowListCreateView.as_view(), name="workflows-list-create"),

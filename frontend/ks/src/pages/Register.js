@@ -2,19 +2,21 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Register from '../components/Register';
 
-// Página contenedora: maneja estado, validación y navegación
+// Página contenedora: maneja estado, validación y navegación del formulario de registro
 const RegisterPage = () => {
   const navigate = useNavigate();
 
+  // Estado para el formulario de registro
   const [formData, setFormData] = useState({ 
-    name: '', 
-    email: '', 
-    password: '', 
-    confirmPassword: '' 
+    name: '',                // Nombre completo del usuario (visible)
+    email: '',               // Correo electrónico del usuario
+    password: '',            // Contraseña ingresada
+    confirmPassword: ''      // Confirmar contraseña
   });
-  const [errors, setErrors] = useState({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState({}); // Estado de errores de validación
+  const [isSubmitting, setIsSubmitting] = useState(false); // Indica si se está enviando el formulario
 
+  // Validación de campos del formulario
   const validate = useCallback((data) => {
     const newErrors = {};
     
@@ -45,32 +47,69 @@ const RegisterPage = () => {
     return newErrors;
   }, []);
 
+  // Maneja cambios en los inputs del formulario
   const handleChange = useCallback((e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    // Limpia el error del campo al modificarlo
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }));
   }, [errors]);
 
-  const handleSubmit = useCallback((e) => {
+  // Maneja el submit del formulario de registro
+  const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
     const validationErrors = validate(formData);
     if (Object.keys(validationErrors).length) {
-      setErrors(validationErrors);
+      setErrors(validationErrors); // Si hay validaciones, muestra los errores
       return;
     }
-    setIsSubmitting(true);
-    // Simulación de registro (aquí iría la llamada a la API)
-    setTimeout(() => {
-      setIsSubmitting(false);
-      // Después de registrar, redirigir al login para que el usuario inicie sesión
+    
+    setIsSubmitting(true); // Indica que comenzó el envío
+    
+    try {
+      // Hacer request al backend para registrar usuario
+      const response = await fetch('/api/register/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          nickname: formData.name.toLowerCase().replace(/\s+/g, '_'),  // Convierte el nombre a nickname (sin espacios)
+          first_name: formData.name.split(' ')[0],                     // Toma la primera palabra como first_name
+          last_name: formData.name.split(' ').slice(1).join(' '),      // El resto como last_name
+          password: formData.password,
+          confirm_password: formData.confirmPassword
+        })
+      });
+  
+      const data = await response.json();
+  
+      if (!response.ok) {
+        // Si la respuesta no es exitosa, muestra error general devuelto por el backend
+        setErrors({ general: data.error || 'Error al registrar' });
+        setIsSubmitting(false);
+        return;
+      }
+  
+      // Si es exitoso, imprime el usuario en consola y redirige a login
+      console.log('Registro exitoso:', data.user);
       navigate('/login');
-    }, 1000);
+  
+    } catch (err) {
+      // Manejo de error de red/conexión
+      console.error('Error de registro:', err);
+      setErrors({ general: 'Falló la conexión con el servidor' });
+      setIsSubmitting(false);
+    }
   }, [formData, navigate, validate]);
 
+  // Permite navegar al login manualmente
   const handleNavigateToLogin = useCallback(() => {
     navigate('/login');
   }, [navigate]);
 
+  // Props que se pasan al componente presentacional Register
   const formProps = useMemo(() => ({
     formData,
     errors,
@@ -80,6 +119,7 @@ const RegisterPage = () => {
     onNavigateToLogin: handleNavigateToLogin,
   }), [formData, errors, isSubmitting, handleChange, handleSubmit, handleNavigateToLogin]);
 
+  // Renderiza el formulario de registro inyectando los props
   return (
     <div className="register-page">
       <Register {...formProps} />
@@ -88,4 +128,3 @@ const RegisterPage = () => {
 };
 
 export default RegisterPage;
-

@@ -40,6 +40,90 @@ class LoginView(APIView):
 
 
 # ============================================
+# Vista de Registro
+# ============================================
+
+class RegisterView(APIView):
+    permission_classes = [AllowAny]  # Cualquiera puede registrarse
+
+    def post(self, request):
+        """Registra un nuevo usuario"""
+        # Obtener datos del request
+        email = request.data.get("email")
+        password = request.data.get("password")
+        confirm_password = request.data.get("confirm_password")
+        nickname = request.data.get("nickname")
+        first_name = request.data.get("first_name", "")
+        last_name = request.data.get("last_name", "")
+
+        # ===== VALIDACIONES =====
+
+        # 1. Validar que todos los campos obligatorios estén presentes
+        if not email or not password or not confirm_password or not nickname:
+            return Response(
+                {"error": "Email, contraseña y nickname son obligatorios"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # 2. Validar que las contraseñas coincidan
+        if password != confirm_password:
+            return Response(
+                {"error": "Las contraseñas no coinciden"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # 3. Validar que la contraseña tiene mínimo 6 caracteres
+        if len(password) < 6:
+            return Response(
+                {"error": "La contraseña debe tener al menos 6 caracteres"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # 4. Validar que el email no esté registrado
+        if User.objects.filter(email=email).exists():
+            return Response(
+                {"error": "El email ya está registrado"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # 5. Validar que el nickname no esté registrado
+        if User.objects.filter(nickname=nickname).exists():
+            return Response(
+                {"error": "El nickname ya está registrado"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # ===== CREAR USUARIO =====
+        try:
+            user = User.objects.create_user(
+                email=email,
+                nickname=nickname,
+                password=password,
+                first_name=first_name,
+                last_name=last_name
+            )
+
+            return Response(
+                {
+                    "message": "Usuario registrado correctamente",
+                    "user": {
+                        "id": user.id,
+                        "email": user.email,
+                        "nickname": user.nickname,
+                        "first_name": user.first_name,
+                        "last_name": user.last_name
+                    }
+                },
+                status=status.HTTP_201_CREATED
+            )
+
+        except Exception as e:
+            return Response(
+                {"error": f"Error al registrar usuario: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+# ============================================
 # Vistas de Workflows
 # ============================================
 

@@ -1,6 +1,7 @@
 // src/pages/Home.js
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import useAuth from '../hooks/useAuth';  
 import { workflowApi } from '../api/workflowApi';
 
 // Plantillas de workflows
@@ -46,6 +47,7 @@ const TEMPLATES = [
 
 export default function Home() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [workflows, setWorkflows] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -58,7 +60,7 @@ export default function Home() {
   const [isCreating, setIsCreating] = useState(false);
 
   // Obtener email del usuario (opcional)
-  const userEmail = localStorage.getItem('user_email') || 'Usuario';
+  const userEmail = user?.email || localStorage.getItem('user_email') || 'Usuario';
 
   // ============================================
   // Cargar workflows desde Django al montar
