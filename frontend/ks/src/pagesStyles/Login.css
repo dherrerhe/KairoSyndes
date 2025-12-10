@@ -152,3 +152,56 @@
   transform: none;                /* Sin transformación */
   box-shadow: none;              /* Sin sombra */
 }
+
+/* Pie de página con link al registro */
+.login-footer {
+  margin-top: 24px;               /* Espacio superior */
+  text-align: center;             /* Centra el texto */
+}
+
+.login-footer-text {
+  color: #666;                     /* Color gris medio */
+  font-size: 14px;                /* Tamaño de fuente pequeño */
+  margin: 0;                      /* Sin margen */
+}
+
+.login-link {
+  color: #667eea;                 /* Color azul-púrpura */
+  text-decoration: none;          /* Sin subrayado */
+  font-weight: 600;               /* Peso de fuente semi-negrita */
+  transition: color 0.3s ease;    /* Transición suave para el color */
+}
+
+.login-link:hover {
+  color: #764ba2;                 /* Color más oscuro al pasar el mouse */
+  text-decoration: underline;     /* Subrayado al pasar el mouse */
+}
+
+/* ==========================================================================
+   DISEÑO RESPONSIVO - Adaptación para dispositivos móviles
+   ========================================================================== */
+
+/* Estilos para pantallas pequeñas (móviles) */
+@media (max-width: 480px) {
+  /* Ajustes para la tarjeta en móviles */
+  .login-card {
+    padding: 30px 20px;          /* Menos espaciado interno */
+    margin: 10px;                 /* Margen pequeño */
+  }
+  
+  /* Título más pequeño en móviles */
+  .login-title {
+    font-size: 24px;             /* Tamaño de fuente más pequeño */
+  }
+  
+  /* Campos de entrada más pequeños en móviles */
+  .form-input {
+    font-size: 14px;             /* Tamaño de fuente más pequeño */
+  }
+  
+  /* Botón más pequeño en móviles */
+  .login-button {
+    font-size: 14px;             /* Tamaño de fuente más pequeño */
+    padding: 12px 16px;          /* Menos espaciado interno */
+  }
+}

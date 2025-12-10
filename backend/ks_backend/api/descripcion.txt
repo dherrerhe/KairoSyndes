@@ -1,0 +1,1 @@
+Esta carpeta recibe requests, consulta DB, responde JSON

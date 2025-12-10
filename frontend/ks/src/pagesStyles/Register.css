@@ -1,0 +1,207 @@
+   /* ==========================================================================
+   REGISTER COMPONENT STYLES - Estilos para el componente de Registro
+   ========================================================================== */
+
+/* Contenedor principal que ocupa toda la pantalla con fondo degradado */
+.register-container {
+  display: flex;                    /* Usa flexbox para centrar el contenido */
+  justify-content: center;         /* Centra horizontalmente */
+  align-items: center;             /* Centra verticalmente */
+  min-height: 100vh;              /* Altura mínima de toda la ventana */
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);  /* Fondo degradado azul-púrpura */
+  padding: 20px;                   /* Espaciado interno de 20px */
+}
+
+/* Tarjeta del formulario con diseño moderno */
+.register-card {
+  background: white;               /* Fondo blanco */
+  border-radius: 12px;            /* Bordes redondeados */
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);  /* Sombra suave */
+  padding: 40px;                  /* Espaciado interno */
+  width: 100%;                    /* Ancho completo */
+  max-width: 400px;               /* Ancho máximo de 400px */
+  animation: slideUp 0.6s ease-out;  /* Animación de entrada */
+}
+
+/* Animación que hace que la tarjeta aparezca deslizándose hacia arriba */
+@keyframes slideUp {
+  from {
+    opacity: 0;                   /* Inicia invisible */
+    transform: translateY(30px); /* Inicia 30px más abajo */
+  }
+  to {
+    opacity: 1;                   /* Termina visible */
+    transform: translateY(0);     /* Termina en su posición normal */
+  }
+}
+
+/* Título del formulario */
+.register-title {
+  text-align: center;             /* Centra el texto */
+  color: #333;                    /* Color gris oscuro */
+  margin-bottom: 30px;            /* Espacio inferior */
+  font-size: 28px;                /* Tamaño de fuente grande */
+  font-weight: 600;               /* Peso de fuente semi-negrita */
+  letter-spacing: -0.5px;         /* Espaciado entre letras más compacto */
+}
+
+/* Contenedor del formulario */
+.register-form {
+  display: flex;                   /* Usa flexbox */
+  flex-direction: column;         /* Apila los elementos verticalmente */
+  gap: 20px;                      /* Espacio de 20px entre elementos */
+}
+
+/* Grupo de cada campo del formulario */
+.form-group {
+  display: flex;                   /* Usa flexbox */
+  flex-direction: column;         /* Apila elementos verticalmente */
+  gap: 8px;                       /* Espacio de 8px entre elementos */
+}
+
+/* Etiquetas de los campos */
+.form-label {
+  color: #555;                     /* Color gris medio */
+  font-weight: 500;               /* Peso de fuente medio */
+  font-size: 14px;                /* Tamaño de fuente pequeño */
+  letter-spacing: 0.3px;          /* Espaciado entre letras */
+}
+
+/* Campos de entrada de texto */
+.form-input {
+  padding: 12px 16px;             /* Espaciado interno */
+  border: 2px solid #e1e5e9;      /* Borde gris claro */
+  border-radius: 8px;             /* Bordes redondeados */
+  font-size: 16px;                /* Tamaño de fuente */
+  transition: all 0.3s ease;      /* Transición suave para cambios */
+  background-color: #fafbfc;      /* Fondo gris muy claro */
+}
+
+/* Estado cuando el campo está enfocado (cuando el usuario hace clic) */
+.form-input:focus {
+  outline: none;                  /* Quita el borde por defecto del navegador */
+  border-color: #667eea;          /* Cambia el borde a azul */
+  background-color: white;        /* Cambia el fondo a blanco */
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);  /* Añade sombra azul suave */
+}
+
+/* Texto de ayuda dentro de los campos */
+.form-input::placeholder {
+  color: #a0a6b1;                 /* Color gris claro */
+  font-size: 14px;                /* Tamaño de fuente pequeño */
+}
+
+/* Estado de error para campos con validación fallida */
+.form-input.error {
+  border-color: #e74c3c;          /* Borde rojo */
+  background-color: #fdf2f2;      /* Fondo rojo muy claro */
+}
+
+/* Estado de error cuando el campo está enfocado */
+.form-input.error:focus {
+  border-color: #e74c3c;          /* Borde rojo */
+  box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.1);  /* Sombra roja suave */
+}
+
+/* Mensajes de error que aparecen debajo de los campos */
+.error-message {
+  color: #e74c3c;                 /* Color rojo */
+  font-size: 12px;                /* Tamaño de fuente pequeño */
+  margin-top: 4px;                /* Espacio superior */
+  display: block;                 /* Se muestra como bloque */
+  font-weight: 500;               /* Peso de fuente medio */
+}
+
+/* Botón de envío del formulario */
+.register-button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);  /* Fondo degradado */
+  color: white;                   /* Texto blanco */
+  border: none;                   /* Sin borde */
+  padding: 14px 20px;            /* Espaciado interno */
+  border-radius: 8px;            /* Bordes redondeados */
+  font-size: 16px;                /* Tamaño de fuente */
+  font-weight: 600;               /* Peso de fuente semi-negrita */
+  cursor: pointer;                /* Cursor de mano al pasar por encima */
+  transition: all 0.3s ease;     /* Transición suave */
+  margin-top: 10px;               /* Espacio superior */
+  letter-spacing: 0.3px;          /* Espaciado entre letras */
+}
+
+/* Estado cuando el mouse está sobre el botón */
+.register-button:hover {
+  transform: translateY(-2px);    /* Se mueve 2px hacia arriba */
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);  /* Sombra más pronunciada */
+}
+
+/* Estado cuando se hace clic en el botón */
+.register-button:active {
+  transform: translateY(0);       /* Vuelve a su posición normal */
+}
+
+/* Estado cuando el botón está deshabilitado */
+.register-button:disabled {
+  background: #bdc3c7;            /* Fondo gris */
+  cursor: not-allowed;            /* Cursor de "no permitido" */
+  transform: none;                /* Sin transformación */
+  box-shadow: none;              /* Sin sombra */
+}
+
+/* Estado deshabilitado cuando el mouse está sobre el botón */
+.register-button:disabled:hover {
+  transform: none;                /* Sin transformación */
+  box-shadow: none;              /* Sin sombra */
+}
+
+/* Pie de página con link al login */
+.register-footer {
+  margin-top: 24px;               /* Espacio superior */
+  text-align: center;             /* Centra el texto */
+}
+
+.register-footer-text {
+  color: #666;                     /* Color gris medio */
+  font-size: 14px;                /* Tamaño de fuente pequeño */
+  margin: 0;                      /* Sin margen */
+}
+
+.register-link {
+  color: #667eea;                 /* Color azul-púrpura */
+  text-decoration: none;          /* Sin subrayado */
+  font-weight: 600;               /* Peso de fuente semi-negrita */
+  transition: color 0.3s ease;    /* Transición suave para el color */
+}
+
+.register-link:hover {
+  color: #764ba2;                 /* Color más oscuro al pasar el mouse */
+  text-decoration: underline;     /* Subrayado al pasar el mouse */
+}
+
+/* ==========================================================================
+   DISEÑO RESPONSIVO - Adaptación para dispositivos móviles
+   ========================================================================== */
+
+/* Estilos para pantallas pequeñas (móviles) */
+@media (max-width: 480px) {
+  /* Ajustes para la tarjeta en móviles */
+  .register-card {
+    padding: 30px 20px;          /* Menos espaciado interno */
+    margin: 10px;                 /* Margen pequeño */
+  }
+  
+  /* Título más pequeño en móviles */
+  .register-title {
+    font-size: 24px;             /* Tamaño de fuente más pequeño */
+  }
+  
+  /* Campos de entrada más pequeños en móviles */
+  .form-input {
+    font-size: 14px;             /* Tamaño de fuente más pequeño */
+  }
+  
+  /* Botón más pequeño en móviles */
+  .register-button {
+    font-size: 14px;             /* Tamaño de fuente más pequeño */
+    padding: 12px 16px;          /* Menos espaciado interno */
+  }
+}
+

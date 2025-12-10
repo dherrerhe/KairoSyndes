@@ -1,9 +1,10 @@
 // Utils para FlowComponent (no dependen de React)
 
-// Contador de ids único (pero no global en todo ambiente JS, solo mientras dure el código)
+
 let idCounter = 100;
 export function getId() {
-  return `${idCounter++}`;
+  // Devuelve un id string con prefijo para evitar choques con ids de backend numéricos
+  return `temp-${idCounter++}`;
 }
 
 // Quita props no serializables/callbacks de data de un nodo

@@ -1,23 +1,15 @@
-import React, { useCallback, useMemo, useState } from 'react';
+// src/pages/Login.js
+import React, { useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Login from '../components/Login';
+import useAuth from '../hooks/useAuth';
 
-// Página contenedora: maneja estado, validación y navegación
 const LoginPage = () => {
   const navigate = useNavigate();
-
+  const { login } = useAuth();
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const validate = useCallback((data) => {
-    const newErrors = {};
-    if (!data.email.trim()) newErrors.email = 'El correo electrónico es obligatorio';
-    else if (!/\S+@\S+\.\S+/.test(data.email)) newErrors.email = 'Ingresa un correo electrónico válido';
-    if (!data.password.trim()) newErrors.password = 'La contraseña es obligatoria';
-    else if (data.password.length < 6) newErrors.password = 'La contraseña debe tener al menos 6 caracteres';
-    return newErrors;
-  }, []);
 
   const handleChange = useCallback((e) => {
     const { name, value } = e.target;
@@ -25,19 +17,66 @@ const LoginPage = () => {
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }));
   }, [errors]);
 
-  const handleSubmit = useCallback((e) => {
+  const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
-    const validationErrors = validate(formData);
-    if (Object.keys(validationErrors).length) {
+    setIsSubmitting(true);
+    setErrors({});
+    
+    const validationErrors = {};
+    if (!formData.email.trim()) validationErrors.email = 'El correo es obligatorio';
+    if (!formData.password) validationErrors.password = 'La contraseña es obligatoria';
+    
+    if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
+      setIsSubmitting(false);
       return;
     }
-    setIsSubmitting(true);
-    setTimeout(() => {
+  
+    try {
+      const response = await fetch('/api/login/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(formData)
+      });
+  
+      const data = await response.json();
+  
+      if (!response.ok) {
+        setErrors({ general: data.error || 'Error al iniciar sesión' });
+        setIsSubmitting(false);
+        return;
+      }
+  
+      if (data.token && data.user) {
+        // Usar el contexto de autenticación
+        login(data.token, {
+          email: data.user.email,
+          nickname: data.user.nickname
+        });
+        
+        console.log('Login exitoso:', data.user);
+        
+        // Redirigir a Home después de un pequeño delay
+        setTimeout(() => {
+          navigate('/Home');
+        }, 100);
+      } else {
+        setErrors({ general: 'Respuesta inesperada del servidor' });
+      }
+  
+    } catch (err) {
+      console.error('Error de login:', err);
+      setErrors({ general: 'Falló la conexión con el servidor' });
+    } finally {
       setIsSubmitting(false);
-      navigate('/Home');
-    }, 1000);
-  }, [formData, navigate, validate]);
+    }
+  }, [formData, navigate, login]);
+
+  const handleNavigateToRegister = useCallback(() => {
+    navigate('/register');
+  }, [navigate]);
 
   const formProps = useMemo(() => ({
     formData,
@@ -45,13 +84,10 @@ const LoginPage = () => {
     isSubmitting,
     onChange: handleChange,
     onSubmit: handleSubmit,
-  }), [formData, errors, isSubmitting, handleChange, handleSubmit]);
+    onNavigateToRegister: handleNavigateToRegister,
+  }), [formData, errors, isSubmitting, handleChange, handleSubmit, handleNavigateToRegister]);
 
-  return (
-    <div className="login-page">
-      <Login {...formProps} />
-    </div>
-  );
+  return <Login {...formProps} />;
 };
 
 export default LoginPage;
