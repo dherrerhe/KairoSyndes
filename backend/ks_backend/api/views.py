@@ -377,7 +377,7 @@ class NodeDetailView(APIView):
                         # El color seleccionado en el canvas debe venir en node_data_field['color'], que tiene prioridad si existe.
                         'color': node_data_field['color'] if 'color' in node_data_field else node_data_dict.get('color', '#4CAF50'),
                         'ip': node_data_field.get('ip', node_data_dict.get('ip', '')),
-                        'progress': node_data_field.get('progress', node_data_dict.get('progress', 0))
+                          'progress': node_data_field.get('progress', node_data_dict.get('progress', 0))
                     }
                     node.node_type = node_data.get('node_type', node.node_type)
                     node.save()
