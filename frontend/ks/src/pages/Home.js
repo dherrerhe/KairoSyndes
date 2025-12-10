@@ -1,10 +1,11 @@
 // src/pages/Home.js
+
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useAuth from '../hooks/useAuth';  
 import { workflowApi } from '../api/workflowApi';
+import { useFeedback, FeedbackDisplay } from '../hooks/useFeedback';
 
-// Plantillas de workflows
 const TEMPLATES = [
   {
     id: 'tpl-empty',
@@ -48,23 +49,24 @@ const TEMPLATES = [
 export default function Home() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { feedback, showSuccess, showError, showLoading, hideFeedback } = useFeedback();
+
   const [workflows, setWorkflows] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   
-  // Estados del modal
   const [showModal, setShowModal] = useState(false);
   const [name, setName] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState(TEMPLATES[0].id);
   const [modalError, setModalError] = useState('');
   const [isCreating, setIsCreating] = useState(false);
 
-  // Obtener email del usuario (opcional)
+  const [deleteConfirmModal, setDeleteConfirmModal] = useState(null); // {id, name}
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const userEmail = user?.email || localStorage.getItem('user_email') || 'Usuario';
 
-  // ============================================
-  // Cargar workflows desde Django al montar
-  // ============================================
+  // Cargar workflows
   useEffect(() => {
     loadWorkflows();
   }, []);
@@ -78,15 +80,15 @@ export default function Home() {
       setWorkflows(data);
     } catch (err) {
       console.error('Error cargando workflows:', err);
-      setError('No se pudieron cargar los workflows. ' + err.message);
+      const errorMsg = 'No se pudieron cargar los workflows';
+      setError(errorMsg + '. ' + err.message);
+      showError(errorMsg);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // ============================================
-  // Abrir modal para crear workflow
-  // ============================================
+  // Crear workflow
   const openNewWorkflowModal = () => {
     setName('');
     setSelectedTemplate(TEMPLATES[0].id);
@@ -94,9 +96,6 @@ export default function Home() {
     setShowModal(true);
   };
 
-  // ============================================
-  // Crear workflow en Django
-  // ============================================
   const createWorkflow = async () => {
     if (!name.trim()) {
       setModalError('El nombre es obligatorio.');
@@ -107,10 +106,8 @@ export default function Home() {
     setModalError('');
 
     try {
-      // Obtener plantilla seleccionada
       const tpl = TEMPLATES.find((t) => t.id === selectedTemplate) ?? TEMPLATES[0];
 
-      // Crear workflow en Django
       const response = await workflowApi.createWorkflow({
         name: name.trim(),
         data: {
@@ -120,53 +117,62 @@ export default function Home() {
         }
       });
 
-      // response.workflow contiene el workflow creado con su ID
       const workflowId = response.workflow.id;
 
       setShowModal(false);
-
-      // Recargar lista de workflows
       await loadWorkflows();
 
-      // Navegar al workspace con el nuevo workflow
-      navigate(`/workspace?workflowId=${workflowId}`);
+      showSuccess('✓ Workflow creado correctamente');
+      setTimeout(() => {
+        navigate(`/workspace?workflowId=${workflowId}`);
+      }, 800);
 
     } catch (err) {
       console.error('Error creando workflow:', err);
-      setModalError('Error al crear workflow: ' + err.message);
+      const errorMsg = 'Error al crear workflow: ' + err.message;
+      setModalError(errorMsg);
+      showError(errorMsg);
     } finally {
       setIsCreating(false);
     }
   };
 
-  // ============================================
-  // Abrir workflow existente
-  // ============================================
+  // Abrir workflow
   const openWorkflow = (workflow) => {
     navigate(`/workspace?workflowId=${workflow.id}`);
   };
 
-  // ============================================
-  // Eliminar workflow
-  // ============================================
-  const deleteWorkflow = async (workflowId, workflowName) => {
-    if (!window.confirm(`¿Eliminar workflow "${workflowName}"?`)) return;
+  // Eliminar workflow (con confirmación)
+  const requestDeleteWorkflow = (workflowId, workflowName) => {
+    setDeleteConfirmModal({ id: workflowId, name: workflowName });
+  };
+
+  const confirmDeleteWorkflow = async () => {
+    if (!deleteConfirmModal) return;
+
+    const { id, name } = deleteConfirmModal;
+    setIsDeleting(true);
 
     try {
-      await workflowApi.deleteWorkflow(workflowId);
+      await workflowApi.deleteWorkflow(id);
       
-      // Recargar lista
       await loadWorkflows();
+      setDeleteConfirmModal(null);
       
+      showSuccess('✓ Workflow eliminado correctamente');
     } catch (err) {
       console.error('Error eliminando workflow:', err);
-      alert('Error al eliminar workflow: ' + err.message);
+      const errorMsg = 'Error al eliminar: ' + err.message;
+      showError(errorMsg);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
-  // ============================================
-  // Render
-  // ============================================
+  const cancelDeleteWorkflow = () => {
+    setDeleteConfirmModal(null);
+  };
+
   return (
     <div className="home-page">
       <header className="home-header">
@@ -183,19 +189,21 @@ export default function Home() {
         </div>
       </header>
 
+      <FeedbackDisplay feedback={feedback} />
+
       <section className="workflows-list">
         {isLoading ? (
-          <div className="loading">Cargando workflows...</div>
+          <div className="loading">⏳ Cargando workflows...</div>
         ) : error ? (
           <div className="error-message">
-            <p>{error}</p>
+            <p>❌ {error}</p>
             <button onClick={loadWorkflows} className="btn-secondary">
               Reintentar
             </button>
           </div>
         ) : workflows.length === 0 ? (
           <div className="empty">
-            <p>No tienes workflows todavía.</p>
+            <p>📭 No tienes workflows todavía.</p>
             <p>Crea tu primer workflow para comenzar.</p>
             <button onClick={openNewWorkflowModal} className="btn-primary" style={{ marginTop: '16px' }}>
               Crear mi primer workflow
@@ -206,7 +214,7 @@ export default function Home() {
             {workflows.map((w) => (
               <li key={w.id} className="workflow-item">
                 <div className="workflow-info">
-                  <strong>{w.name}</strong>
+                  <strong>📊 {w.name}</strong>
                   <div className="workflow-meta">
                     Creado el {new Date(w.created_at).toLocaleDateString('es-ES', {
                       year: 'numeric',
@@ -229,7 +237,7 @@ export default function Home() {
                   </button>
                   <button 
                     className="btn-danger" 
-                    onClick={() => deleteWorkflow(w.id, w.name)}
+                    onClick={() => requestDeleteWorkflow(w.id, w.name)}
                   >
                     Eliminar
                   </button>
@@ -273,7 +281,7 @@ export default function Home() {
               </select>
             </label>
 
-            {modalError && <div className="form-error">{modalError}</div>}
+            {modalError && <div className="form-error">❌ {modalError}</div>}
 
             <div className="modal-actions">
               <button 
@@ -288,7 +296,39 @@ export default function Home() {
                 onClick={createWorkflow}
                 disabled={isCreating}
               >
-                {isCreating ? 'Creando...' : 'Crear workflow'}
+                {isCreating ? '⏳ Creando...' : 'Crear workflow'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de confirmación para eliminar */}
+      {deleteConfirmModal && (
+        <div className="modal-backdrop" onMouseDown={() => !isDeleting && cancelDeleteWorkflow()}>
+          <div className="modal" onMouseDown={(e) => e.stopPropagation()}>
+            <h2>⚠️ Confirmar eliminación</h2>
+            <p>
+              ¿Estás seguro de que quieres eliminar el workflow <strong>"{deleteConfirmModal.name}"</strong>?
+            </p>
+            <p style={{ fontSize: '12px', color: '#666' }}>
+              Esta acción no se puede deshacer.
+            </p>
+
+            <div className="modal-actions">
+              <button 
+                className="btn-secondary" 
+                onClick={cancelDeleteWorkflow}
+                disabled={isDeleting}
+              >
+                Cancelar
+              </button>
+              <button 
+                className="btn-danger" 
+                onClick={confirmDeleteWorkflow}
+                disabled={isDeleting}
+              >
+                {isDeleting ? '⏳ Eliminando...' : '🗑️ Eliminar definitivamente'}
               </button>
             </div>
           </div>
