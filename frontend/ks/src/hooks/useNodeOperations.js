@@ -12,7 +12,7 @@ import { getId } from '../components/flowUtils';
  * @param {Function} onError - Callback cuando una operación falla
  * @returns {Object} Funciones para manipular nodos
  */
-export const useNodeOperations = (workflowId, setNodes, onSuccess, onError) => {
+export const useNodeOperations = (workflowId, setNodes, onSuccess, onError, handleChangeLabel, handleShowComments) => {
   
   /**
    * Obtener IP del usuario
@@ -38,71 +38,100 @@ export const useNodeOperations = (workflowId, setNodes, onSuccess, onError) => {
       onError?.('No hay workflowId activo');
       return null;
     }
-
-    // Declarar tempId fuera del try/catch para que esté disponible en ambos bloques
+  
     let tempId;
-
+  
     try {
       const userIP = await getUserIP();
       tempId = String(getId());
       
-      // Generar posición aleatoria si no se proporciona
       const nodePosition = position || {
         x: 120 + Math.random() * 200,
         y: 120 + Math.random() * 80
       };
-
-      const { name, time = '', inCharge = '', type = 'custom' } = nodeData;
-
-      // Crear nodo local (optimistic update)
+  
+      const { 
+        name, 
+        time = '', 
+        inCharge = '', 
+        description = '',
+        color = '#4CAF50',
+        type = 'custom' 
+      } = nodeData;
+  
       const localNode = type === 'custom'
         ? {
             id: tempId,
             type: 'custom',
             position: nodePosition,
-            data: { name, time, inCharge, ip: userIP, progress: 0 }
+            data: { 
+              name, 
+              time, 
+              inCharge, 
+              description,
+              color,
+              ip: userIP, 
+              progress: 0,
+              comments: [],
+              onChangeLabel: handleChangeLabel,
+              onShowComments: handleShowComments
+            }
           }
         : {
             id: tempId,
             position: nodePosition,
             data: { label: name }
           };
-
+  
       setNodes((existingNodes) => [...existingNodes, localNode]);
-
-      // Guardar en el backend
+  
       const savedNode = await workflowApi.createNode(workflowId, {
         workflow: parseInt(workflowId),
         node_type: type,
         name: name,
         position: nodePosition,
         data: type === 'custom'
-          ? { name, time, inCharge, ip: userIP, progress: 0 }
+          ? { 
+              name, 
+              time, 
+              inCharge, 
+              description,
+              color,
+              ip: userIP, 
+              progress: 0 
+            }
           : { label: name }
       });
-
-      // Actualizar con el ID real del backend
+  
       setNodes((nds) =>
         nds.map((n) =>
           n.id === tempId
-            ? { ...n, id: savedNode.id.toString() }
+            ? { 
+                ...n, 
+                id: savedNode.id.toString(),
+                data: {
+                  ...n.data,
+                  comments: [],
+                  onChangeLabel: handleChangeLabel,
+                  onShowComments: handleShowComments
+                }
+              }
             : n
         )
       );
-
+  
       onSuccess?.('Nodo creado correctamente');
       return savedNode;
-
+  
     } catch (error) {
       console.error('Error creando nodo:', error);
       onError?.(error.message);
-      // Revertir optimistic update
       if (tempId) {
         setNodes((nds) => nds.filter((n) => n.id !== tempId));
       }
       return null;
     }
-  }, [workflowId, setNodes, getUserIP, onSuccess, onError]);
+  }, [workflowId, setNodes, getUserIP, onSuccess, onError, handleChangeLabel, handleShowComments]);
 
   /**
    * Actualizar un nodo existente
@@ -114,22 +143,20 @@ export const useNodeOperations = (workflowId, setNodes, onSuccess, onError) => {
       onError?.('No hay workflowId activo');
       return null;
     }
-
+  
     try {
       const userIP = await getUserIP();
       
-      // Validar progreso si existe
       const validProgress = updates.progress !== undefined
         ? Math.max(0, Math.min(100, Number(updates.progress) || 0))
         : undefined;
-
+  
       const updatedData = {
         ...updates,
         ...(validProgress !== undefined && { progress: validProgress }),
         ip: userIP
       };
-
-      // Actualizar localmente primero (optimistic update)
+  
       setNodes((nds) =>
         nds.map((n) =>
           n.id === nodeId
@@ -137,26 +164,26 @@ export const useNodeOperations = (workflowId, setNodes, onSuccess, onError) => {
             : n
         )
       );
-
-      // Actualizar en el backend
+  
       const savedNode = await workflowApi.updateNode(workflowId, nodeId, {
         name: updates.name,
         data: {
           name: updates.name,
           time: updates.time,
           inCharge: updates.inCharge,
+          description: updates.description,
+          color: updates.color,
           progress: validProgress !== undefined ? validProgress : updates.progress,
           ip: userIP
         }
       });
-
+  
       onSuccess?.('Nodo actualizado correctamente');
       return savedNode;
-
+  
     } catch (error) {
       console.error('Error actualizando nodo:', error);
       onError?.(error.message);
-      // TODO: Revertir cambios en caso de error
       return null;
     }
   }, [workflowId, setNodes, getUserIP, onSuccess, onError]);

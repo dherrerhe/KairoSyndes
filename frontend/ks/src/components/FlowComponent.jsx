@@ -114,31 +114,8 @@ export default function FlowComponent() {
     [commentNodeId, nodes]
   );
 
-  // Hooks operaciones
-  const nodeOps = useNodeOperations(workflowId, setNodes, showSuccess, showError);
-  const edgeOps = useEdgeOperations(workflowId, setEdges, showSuccess, showError);
-
   // ==========================
-  // FUNCIONES UTILITARIAS
-  // ==========================
-  const toggleSection = useCallback(
-    (section) => setExpandedSections(prev => ({ ...prev, [section]: !prev[section] })),
-    []
-  );
-
-  const getUserIP = useCallback(async () => {
-    try {
-      const response = await fetch('https://api.ipify.org?format=json');
-      const data = await response.json();
-      return data.ip;
-    } catch (error) {
-      console.warn('No se pudo obtener la IP del usuario:', error);
-      return 'IP no disponible';
-    }
-  }, []);
-
-  // ==========================
-  // FUNCIONES DE CALLBACKS (Sin duplicación)
+  // CALLBACKS (MOVER AQUÍ - ANTES DE nodeOps)
   // ==========================
   const handleShowComments = useCallback((nodeId) => setCommentNodeId(nodeId), []);
   const handleCloseComments = useCallback(() => setCommentNodeId(null), []);
@@ -168,6 +145,31 @@ export default function FlowComponent() {
     },
     [setNodes]
   );
+
+  // ==========================
+  // HOOKS OPERACIONES (DESPUÉS DE CALLBACKS)
+  // ==========================
+  const nodeOps = useNodeOperations(workflowId, setNodes, showSuccess, showError, handleChangeLabel, handleShowComments);
+  const edgeOps = useEdgeOperations(workflowId, setEdges, showSuccess, showError);
+
+  // ==========================
+  // FUNCIONES UTILITARIAS
+  // ==========================
+  const toggleSection = useCallback(
+    (section) => setExpandedSections(prev => ({ ...prev, [section]: !prev[section] })),
+    []
+  );
+
+  const getUserIP = useCallback(async () => {
+    try {
+      const response = await fetch('https://api.ipify.org?format=json');
+      const data = await response.json();
+      return data.ip;
+    } catch (error) {
+      console.warn('No se pudo obtener la IP del usuario:', error);
+      return 'IP no disponible';
+    }
+  }, []);
 
   // inyectar callbacks a nodos (UNA SOLA VEZ al iniciar)
   useEffect(() => {
@@ -225,35 +227,14 @@ export default function FlowComponent() {
   // ==========================
   const handleAddNode = useCallback(
     async ({ name, time, inCharge, description, color = '#4CAF50', type = 'custom' }) => {
-      const userIP = await getUserIP();
       const position = { x: 120 + Math.random() * 200, y: 120 + Math.random() * 80 };
-      const nodeToAdd =
-        type === 'custom'
-          ? {
-              id: getId(),
-              type: 'custom',
-              position,
-              data: {
-                name,
-                time,
-                inCharge,
-                description,
-                color,
-                ip: userIP,
-                progress: 0,
-                comments: [],
-                onChangeLabel: handleChangeLabel,
-                onShowComments: handleShowComments
-              }
-            }
-          : {
-              id: getId(),
-              position,
-              data: { label: name }
-            };
-      setNodes(existingNodes => [...existingNodes, nodeToAdd]);
+      
+      await nodeOps.createNode(
+        { name, time, inCharge, description, color, type },
+        position
+      );
     },
-    [setNodes, getUserIP, handleChangeLabel, handleShowComments]
+    [nodeOps]
   );
 
   const handleResetFlow = useCallback(() => {
@@ -278,10 +259,10 @@ export default function FlowComponent() {
   }, [setNodes, setEdges, handleChangeLabel, handleShowComments, showSuccess]);
 
   const createNodeCentered = useCallback(
-    async (label, time = '', inCharge = '', description = '', type = 'custom') => {
-      const userIP = await getUserIP();
+    async (label, time = '', inCharge = '', description = '', color = '#4CAF50', type = 'custom') => {
       const bounds = reactFlowWrapper.current?.getBoundingClientRect();
       let position = { x: 250, y: 150 };
+      
       if (bounds && reactFlowInstance.current?.project) {
         const centerClient = {
           x: bounds.left + bounds.width / 2,
@@ -292,30 +273,13 @@ export default function FlowComponent() {
           y: centerClient.y - bounds.top,
         });
       }
-      const newNode = {
-        id: getId(),
-        type: type === 'custom' ? 'custom' : undefined,
-        position,
-        data:
-          type === 'custom'
-            ? {
-                name: label,
-                time,
-                inCharge,
-                description,
-                color: '#4CAF50',
-                ip: userIP,
-                progress: 0,
-                comments: [],
-                onChangeLabel: handleChangeLabel,
-                onShowComments: handleShowComments
-              }
-            : { label }
-      };
-      setNodes(nds => nds.concat(newNode));
-      await nodeOps.createNode({ name: label, time, inCharge, type }, position);
+  
+      await nodeOps.createNode(
+        { name: label, time, inCharge, description, color, type },
+        position
+      );
     },
-    [getUserIP, reactFlowWrapper, reactFlowInstance, setNodes, nodeOps, handleChangeLabel, handleShowComments]
+    [nodeOps, reactFlowWrapper, reactFlowInstance]
   );
 
   // ==========================
@@ -537,31 +501,37 @@ export default function FlowComponent() {
   }, [nodes, prepareEdgesForSave, workflowId, showSuccess, showError]);
 
   // ==========================
-  // AUTO-SAVE (UNA SOLA VEZ - SIN DUPLICACIÓN)
+  // AUTO-SAVE
   // ==========================
   useEffect(() => {
     if (!workflowId) return;
-
+  
     const autoSaveInterval = setInterval(async () => {
       try {
         const { workflowApi } = await import('../api/workflowApi');
         const instanceNodes = reactFlowInstance?.current?.getNodes?.() ?? nodes;
         
-        const nodesToSave = instanceNodes
-          .filter(n => !n.id.toString().startsWith('temp-'))
-          .map(n => ({
-            id: parseInt(n.id),
-            position: n.position,
-            data: {
-              name: n.data?.name,
-              time: n.data?.time,
-              inCharge: n.data?.inCharge,
-              progress: n.data?.progress !== undefined ? n.data.progress : 0,
-              ip: n.data?.ip,
-              color: n.data?.color || '#4CAF50'
-            }
-          }));
-
+        const savedNodes = instanceNodes.filter(n => !n.id.toString().startsWith('temp-'));
+        const tempNodes = instanceNodes.filter(n => n.id.toString().startsWith('temp-'));
+  
+        const nodesToSave = savedNodes.map(n => ({
+          id: parseInt(n.id),
+          position: n.position,
+          data: {
+            name: n.data?.name,
+            time: n.data?.time,
+            inCharge: n.data?.inCharge,
+            description: n.data?.description,
+            progress: n.data?.progress !== undefined ? n.data.progress : 0,
+            ip: n.data?.ip,
+            color: n.data?.color || '#4CAF50'
+          }
+        }));
+  
+        if (tempNodes.length > 0) {
+          console.warn('Nodos temporales sin guardar:', tempNodes.length);
+        }
+  
         const edgesToSave = edges.map(e => ({
           id: parseInt(e.id),
           label: e.label || '',
@@ -570,16 +540,16 @@ export default function FlowComponent() {
             animated: e.animated || false,
           }
         }));
-
+  
         if (nodesToSave.length > 0 || edgesToSave.length > 0) {
           await workflowApi.saveCompleteWorkflow(workflowId, nodesToSave, edgesToSave);
-          console.log('✅ Auto-save: Workflow guardado');
+          console.log('Auto-save: Workflow guardado');
         }
       } catch (error) {
-        console.error('❌ Error en auto-save:', error);
+        console.error('Error en auto-save:', error);
       }
-    }, 30000); // 30 segundos
-
+    }, 30000);
+  
     return () => clearInterval(autoSaveInterval);
   }, [workflowId, nodes, edges]);
 

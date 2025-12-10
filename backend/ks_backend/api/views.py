@@ -298,24 +298,22 @@ class NodeListCreateView(APIView):
         """Crea un nuevo nodo"""
         try:
             workflow = Workflow.objects.get(pk=workflow_id)
-            
-            # Agregar workflow al request data
+        
             data = request.data.copy()
             data['workflow'] = workflow.id
-            
+    
             serializer = NodeSerializer(data=data)
-            
+        
             if serializer.is_valid():
                 serializer.save()
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
-            
+        
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except Workflow.DoesNotExist:
             return Response(
                 {"error": "Workflow no encontrado"},
                 status=status.HTTP_404_NOT_FOUND
             )
-
 
 class NodeDetailView(APIView):
     """
@@ -337,22 +335,122 @@ class NodeDetailView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-    def patch(self, request, workflow_id, node_id):
-        """Actualiza un nodo"""
+    def patch(self, request, pk):
+        """
+        Actualiza un workflow (solo si es propietario).
+        Puede actualizar nodos y edges asociados en lote.
+        """
         try:
-            node = Node.objects.get(pk=node_id, workflow_id=workflow_id)
-            serializer = NodeSerializer(node, data=request.data, partial=True)
-            
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data, status=status.HTTP_200_OK)
-            
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        except Node.DoesNotExist:
+            workflow = Workflow.objects.get(pk=pk, owner=request.user)
+        except Workflow.DoesNotExist:
             return Response(
-                {"error": "Nodo no encontrado"},
+                {"error": "Workflow no encontrado o no tienes permisos"},
                 status=status.HTTP_404_NOT_FOUND
             )
+
+        data = request.data.copy()
+        nodes_data = data.pop('nodes', None)
+        edges_data = data.pop('edges', None)
+
+        serializer = WorkflowSerializer(workflow, data=data, partial=True)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        workflow = serializer.save()
+
+        # ACTUALIZACIÓN/CREACIÓN MASIVA DE NODOS
+        node_results = []
+        if nodes_data is not None:
+            for node_data in nodes_data:
+                node_id = node_data.get('id')
+                try:
+                    node = Node.objects.get(id=node_id, workflow=workflow)
+                    node.position = node_data.get('position', node.position)
+                    node_data_field = node_data.get('data', {})
+                    # Actualizar campos individualmente por robustez
+                    node_data_dict = node.data if node.data else {}
+                    node.data = {
+                        'name': node_data_field.get('name', node_data_dict.get('name', '')),
+                        'time': node_data_field.get('time', node_data_dict.get('time', '')),
+                        'inCharge': node_data_field.get('inCharge', node_data_dict.get('inCharge', '')),
+                        'description': node_data_field.get('description', node_data_dict.get('description', '')),
+                        # El color seleccionado en el canvas debe venir en node_data_field['color'], que tiene prioridad si existe.
+                        'color': node_data_field['color'] if 'color' in node_data_field else node_data_dict.get('color', '#4CAF50'),
+                        'ip': node_data_field.get('ip', node_data_dict.get('ip', '')),
+                        'progress': node_data_field.get('progress', node_data_dict.get('progress', 0))
+                    }
+                    node.node_type = node_data.get('node_type', node.node_type)
+                    node.save()
+                    node_results.append({'id': node.id, 'status': 'updated'})
+                except Node.DoesNotExist:
+                    n = Node.objects.create(
+                        workflow=workflow,
+                        id=node_id,
+                        position=node_data.get('position', {}),
+                        data=node_data.get('data', {}),
+                        node_type=node_data.get('node_type', 'custom')
+                    )
+                    node_results.append({'id': n.id, 'status': 'created'})
+
+        # ACTUALIZACIÓN/CREACIÓN MASIVA DE EDGES
+        edge_results = []
+        if edges_data is not None:
+            for edge_data in edges_data:
+                edge_id = edge_data.get('id')
+                try:
+                    edge = Edge.objects.get(id=edge_id, workflow=workflow)
+                    edge.label = edge_data.get('label', edge.label)
+                    edge_data_field = edge_data.get('data', {})
+                    edge.data = {
+                        'edge_type': edge_data_field.get('edge_type', edge.data.get('edge_type', 'default')),
+                        'animated': edge_data_field.get('animated', edge.data.get('animated', False)),
+                        'style': edge_data_field.get('style', edge.data.get('style', {}))
+                    }
+                    # source y target pueden venir como enteros o dicts
+                    source_id = (
+                        edge_data.get('source')
+                        if isinstance(edge_data.get('source'), int) or isinstance(edge_data.get('source'), str)
+                        else edge_data.get('source', {}).get('id')
+                    )
+                    target_id = (
+                        edge_data.get('target')
+                        if isinstance(edge_data.get('target'), int) or isinstance(edge_data.get('target'), str)
+                        else edge_data.get('target', {}).get('id')
+                    )
+                    if source_id: edge.source_id = source_id
+                    if target_id: edge.target_id = target_id
+                    edge.save()
+                    edge_results.append({'id': edge.id, 'status': 'updated'})
+                except Edge.DoesNotExist:
+                    # Si faltan source o target, ignorar la creación
+                    source_id = (
+                        edge_data.get('source')
+                        if isinstance(edge_data.get('source'), int) or isinstance(edge_data.get('source'), str)
+                        else edge_data.get('source', {}).get('id')
+                    )
+                    target_id = (
+                        edge_data.get('target')
+                        if isinstance(edge_data.get('target'), int) or isinstance(edge_data.get('target'), str)
+                        else edge_data.get('target', {}).get('id')
+                    )
+                    if source_id and target_id:
+                        e = Edge.objects.create(
+                            workflow=workflow,
+                            id=edge_id,
+                            source_id=source_id,
+                            target_id=target_id,
+                            label=edge_data.get('label', ''),
+                            data=edge_data.get('data', {}),
+                        )
+                        edge_results.append({'id': e.id, 'status': 'created'})
+
+        # Respuesta con estado y detalles de nodos/edges
+        return Response({
+            "message": "Workflow actualizado correctamente.",
+            "workflow": WorkflowSerializer(workflow).data,
+            "nodes_status": node_results,
+            "edges_status": edge_results,
+        }, status=status.HTTP_200_OK)
 
     def delete(self, request, workflow_id, node_id):
         """Elimina un nodo y sus edges asociados"""
